@@ -92,8 +92,9 @@ function render() {
   $('device-state').classList.toggle('offline',!live);
   $('monitor-toggle').textContent=d.monitoring?'Pause monitor':'Start monitor';
   $('monitor-toggle').disabled=!online||!d.present||busy(d)||pendingMonitors.has(d.id);
-  $('identify').disabled=!online||!d.present||busy(d)||!d.status?.identify_supported||identifying.has(d.id);
-  $('identify').textContent=identifying.has(d.id)?'Identifying…':'Identify';
+  const flashing=d.status?.identifying===true && d.status_age_s<5;
+  $('identify').disabled=!online||!d.present||busy(d)||!d.status?.identify_supported||identifying.has(d.id)||flashing;
+  $('identify').textContent=identifying.has(d.id)?'Sending…':flashing?'Identifying…':'Identify';
   $('identify').title=d.status?.identify_supported?'Flash this board’s LED for 5 seconds over USB':'Flash the current firmware to enable Identify';
   $('download').href=`/api/devices/${d.id}/download`;
   renderNearby(d,live); renderSettings(d); renderUart(d); renderJob(d);
@@ -238,9 +239,12 @@ $('identify').addEventListener('click',async()=>{
   const d=current();if(!d||$('identify').disabled)return;
   identifying.add(d.id);render();
   try{
-    await api(`/api/devices/${d.id}/identify`,{});error(null);
-    setTimeout(()=>{identifying.delete(d.id);render();},5000);
-  }catch(e){identifying.delete(d.id);error(e.message);render();}
+    const data=await api(`/api/devices/${d.id}/identify`,{});
+    const device=state.devices.find(x=>x.id===d.id);
+    if(device){device.status=data.status;device.status_age_s=0;}
+    error(null);
+  }catch(e){error(e.message);}
+  finally{identifying.delete(d.id);render();}
 });
 $('refresh').addEventListener('click',refresh);
 $('log-filter').addEventListener('change',renderLogs);

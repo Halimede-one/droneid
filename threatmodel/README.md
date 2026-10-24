@@ -56,38 +56,13 @@ radio link to the base station, or future custom operator software.
 
 ## Data flows and trust boundaries
 
-```mermaid
-flowchart LR
-    RF["Untrusted BLE / Wi-Fi transmitters"]
-    subgraph ESP["ESP32 firmware trust domain"]
-        Driver["Radio controller / drivers"]
-        Parser["RID framing + decoding"]
-        Queue["Bounded observation queues"]
-        UART["MAVLink HEARTBEAT + TUNNEL writer"]
-        USB["USB JSONL + configuration commands"]
-        Store["NVS settings"]
-        Driver --> Parser --> Queue
-        Queue --> UART
-        Queue --> USB
-        USB --> Store
-    end
-    subgraph Host["Bench host trust domain"]
-        Server["Loopback HTTP service / USB reader"]
-        Browser["Browser UI"]
-        Build["Local firmware bundle"]
-        Browser <--> Server
-        Build --> Server
-    end
-    FC["Flight controller MAVLink port"]
-    Link["Telemetry downlink"]
-    GCS["Custom base-station parser / operator"]
-    RF -->|"TB1: unauthenticated broadcasts"| Driver
-    UART -->|"TB2: physical UART TX authority"| FC
-    FC -->|"Unsigned telemetry into ESP"| UART
-    USB <-->|"TB3: USB records and maintenance"| Server
-    Server -->|"TB4: ROM flashing"| ESP
-    FC --> Link -->|"TB5: report provenance / replay"| GCS
-```
+![Portrait data-flow diagram: untrusted radio input enters the ESP32, reports cross the UART and telemetry downlink to the operator, and a separate maintenance view shows USB configuration and ROM flashing of the same device.](images/data-flows-trust-boundaries.svg)
+
+[Open the full-size SVG](images/data-flows-trust-boundaries.svg).
+Read the operating flow from top to bottom. The lower maintenance view shows
+the **same ESP32**, with USB records, configuration and firmware replacement
+drawn separately. Arrowheads show direction; outlined panels identify trust
+domains, and TB1–TB5 retain the original boundary identifiers.
 
 The diagram shows the ArduPilot routing concept, not verified end-to-end
 hardware behavior. The reference iNav implementation has no general TUNNEL

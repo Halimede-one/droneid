@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1960" viewBox="0 0 760 1960" role="img" aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">DroneID data flows and trust boundaries</title>
+  <desc id="diagram-description">Portrait diagram with two views of the same ESP32. In the operating view, unauthenticated BLE and Wi-Fi broadcasts cross TB1 into radio drivers, Remote ID decoding and bounded observation queues. Across TB2, the ESP32 sends MAVLink heartbeat and TUNNEL reports to the flight controller, while unsigned controller telemetry returns to the ESP32. A compromised ESP32 can transmit arbitrary UART traffic. The controller forwards observations over a telemetry downlink across TB5 to the base-station parser and operator. This is the ArduPilot routing concept, with hardware integration unverified; reference iNav has no general TUNNEL forwarder but still receives UART messages. In the maintenance view, a browser and a local firmware bundle feed the bench host's loopback HTTP service and USB reader. Across TB3, USB JSONL records go to the host and configuration commands return to the ESP32's USB interface and NVS settings. Across TB4, the host uses the ROM bootloader to replace firmware. Both ESP32 views represent one firmware trust domain.</desc>
+
+  <defs>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9 Z" fill="#367556"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9 Z" fill="#34698b"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9 Z" fill="#9b6427"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #203532; }
+      .title { font-size: 32px; font-weight: 700; letter-spacing: -.7px; }
+      .heading { font-size: 23px; font-weight: 650; }
+      .label { font-size: 20px; font-weight: 600; }
+      .body { font-size: 17px; }
+      .small { font-size: 15px; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 1.6px; }
+      .muted { fill: #596d64; }
+      .green { fill: #367556; }
+      .blue { fill: #34698b; }
+      .amber { fill: #87551d; }
+      .red { fill: #963f32; }
+      .badge { font-size: 14px; font-weight: 700; text-anchor: middle; }
+      .flow { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+      .report { stroke: #367556; marker-end: url(#arrow-green); }
+      .control { stroke: #34698b; marker-end: url(#arrow-blue); }
+      .flash { stroke: #9b6427; stroke-dasharray: 6 6; marker-end: url(#arrow-amber); }
+      .card { fill: #fff; stroke: #d8e2d9; stroke-width: 1.2; }
+    </style>
+  </defs>
+
+  <rect width="760" height="1960" rx="20" fill="#f5f6f2"/>
+  <text x="40" y="58" class="title">DroneID · trust boundaries</text>
+  <text x="40" y="88" class="body muted">Radio reports flow downward. USB maintenance has its own view.</text>
+
+  <g aria-label="Arrow legend">
+    <path d="M 42 117 H 76" class="flow report"/>
+    <text x="88" y="122" class="small">Reports</text>
+    <path d="M 200 117 H 234" class="flow control"/>
+    <text x="246" y="122" class="small">Telemetry / settings</text>
+    <path d="M 435 117 H 469" class="flow flash"/>
+    <text x="481" y="122" class="small">Firmware writes</text>
+  </g>
+
+  <text x="40" y="160" class="eyebrow muted">01 / OPERATING FLOW</text>
+
+  <g aria-label="Untrusted radio environment">
+    <rect x="40" y="180" width="680" height="92" rx="14" fill="#fff7e9" stroke="#d6b77f" stroke-width="1.5"/>
+    <text x="72" y="218" class="heading">Nearby BLE / Wi-Fi transmitters</text>
+    <text x="72" y="246" class="body amber">IDs, hello messages and positions are unverified claims.</text>
+  </g>
+
+  <g aria-label="TB1: unauthenticated radio broadcasts enter the ESP32">
+    <path d="M 90 272 V 344" class="flow report"/>
+    <rect x="124" y="294" width="56" height="27" rx="7" fill="#efe2c7"/>
+    <text x="152" y="313" class="badge amber">TB1</text>
+    <text x="196" y="313" class="body">Unauthenticated broadcast input</text>
+  </g>
+
+  <g aria-label="ESP32 firmware trust domain, operating view">
+    <rect x="40" y="344" width="680" height="334" rx="16" fill="#edf3e8" stroke="#6f8e69" stroke-width="1.8"/>
+    <text x="72" y="373" class="eyebrow green">ESP32 FIRMWARE TRUST DOMAIN</text>
+    <text x="72" y="403" class="heading">XIAO ESP32-C5 · one shared firmware domain</text>
+
+    <rect x="72" y="422" width="616" height="62" rx="9" class="card"/>
+    <text x="110" y="447" class="label">Radio controller + drivers</text>
+    <text x="110" y="470" class="small muted">Receive traffic before application validation</text>
+
+    <path d="M 90 484 V 504" class="flow report"/>
+    <rect x="72" y="504" width="616" height="62" rx="9" class="card"/>
+    <text x="110" y="529" class="label">Remote ID framing + decoding</text>
+    <text x="110" y="552" class="small muted">Length checks and decoding do not authenticate an aircraft</text>
+
+    <path d="M 90 566 V 586" class="flow report"/>
+    <rect x="72" y="586" width="616" height="66" rx="9" class="card"/>
+    <text x="110" y="612" class="label">Bounded queues + report formatter</text>
+    <text x="110" y="636" class="small muted">UART: HEARTBEAT + TUNNEL · USB: JSONL records</text>
+  </g>
+
+  <g aria-label="TB2: reports go to the flight controller and unsigned telemetry returns">
+    <path d="M 90 678 V 820" class="flow report"/>
+    <path d="M 664 820 V 678" class="flow control"/>
+    <rect x="124" y="697" width="56" height="27" rx="7" fill="#f1dcd6"/>
+    <text x="152" y="716" class="badge red">TB2</text>
+    <text x="196" y="717" class="label">UART · two directions</text>
+    <text x="124" y="751" class="body green">↓ ESP → FC: HEARTBEAT + TUNNEL reports</text>
+    <text x="124" y="780" class="body blue">↑ FC → ESP: unsigned controller telemetry</text>
+  </g>
+
+  <g aria-label="Flight controller trust domain and compromise risk">
+    <rect x="40" y="820" width="680" height="154" rx="16" fill="#fff" stroke="#bb8e82" stroke-width="1.8"/>
+    <text x="72" y="848" class="eyebrow muted">FLIGHT CONTROLLER TRUST DOMAIN</text>
+    <text x="72" y="880" class="heading">MicoAir H743 V2 · MAVLink input</text>
+    <text x="72" y="906" class="body muted">Controller handlers + routing depend on firmware and settings.</text>
+    <rect x="60" y="923" width="640" height="33" rx="7" fill="#fbefea"/>
+    <text x="72" y="945" class="body red">Compromised ESP32 → arbitrary UART traffic is possible.</text>
+  </g>
+
+  <g aria-label="TB5: observations cross the downlink to the base station">
+    <path d="M 90 974 V 1050" class="flow report"/>
+    <rect x="124" y="986" width="56" height="27" rx="7" fill="#e0e9e6"/>
+    <text x="152" y="1005" class="badge green">TB5</text>
+    <text x="196" y="1006" class="label">Telemetry downlink</text>
+    <text x="124" y="1033" class="small muted">Reporter provenance + replay boundary</text>
+  </g>
+
+  <g aria-label="Base station trust domain">
+    <rect x="40" y="1050" width="680" height="114" rx="16" fill="#fff" stroke="#7c9993" stroke-width="1.8"/>
+    <text x="72" y="1077" class="eyebrow muted">BASE STATION TRUST DOMAIN</text>
+    <text x="72" y="1107" class="heading">Custom parser → logs → operator</text>
+    <text x="72" y="1138" class="body muted">A trusted report can still contain false aircraft claims.</text>
+  </g>
+
+  <text x="40" y="1194" class="small muted">ArduPilot routing concept; end-to-end hardware is unverified.</text>
+  <text x="40" y="1218" class="small muted">iNav reference: no general TUNNEL forwarding; UART still receives.</text>
+
+  <path d="M 40 1244 H 720" stroke="#d5ded4"/>
+  <text x="40" y="1284" class="eyebrow muted">02 / USB BENCH &amp; MAINTENANCE</text>
+
+  <g aria-label="Bench host trust domain">
+    <rect x="40" y="1310" width="680" height="250" rx="16" fill="#edf1f4" stroke="#7e9aab" stroke-width="1.8"/>
+    <text x="72" y="1339" class="eyebrow blue">BENCH HOST TRUST DOMAIN</text>
+
+    <rect x="72" y="1358" width="272" height="66" rx="9" class="card"/>
+    <text x="208" y="1385" text-anchor="middle" class="label">Browser UI</text>
+    <text x="208" y="1409" text-anchor="middle" class="small muted">Local user</text>
+    <rect x="416" y="1358" width="272" height="66" rx="9" class="card"/>
+    <text x="552" y="1385" text-anchor="middle" class="label">Local firmware bundle</text>
+    <text x="552" y="1409" text-anchor="middle" class="small muted">Executable code to flash</text>
+
+    <path d="M 208 1424 V 1450" class="flow control" marker-start="url(#arrow-blue)"/>
+    <path d="M 552 1424 V 1450" class="flow flash"/>
+    <rect x="72" y="1450" width="616" height="82" rx="9" class="card"/>
+    <text x="380" y="1481" text-anchor="middle" class="label">Loopback HTTP service + USB reader</text>
+    <text x="380" y="1509" text-anchor="middle" class="body muted">127.0.0.1 · records, settings and flashing</text>
+  </g>
+
+  <g aria-label="TB3: USB records upward and configuration commands downward">
+    <path d="M 92 1560 V 1700" class="flow control"/>
+    <path d="M 116 1700 V 1560" class="flow report"/>
+    <rect x="144" y="1590" width="56" height="27" rx="7" fill="#dce7ee"/>
+    <text x="172" y="1609" class="badge blue">TB3</text>
+    <text x="216" y="1610" class="label">USB link</text>
+    <text x="144" y="1642" class="body">JSONL ↑ / settings ↓</text>
+    <text x="144" y="1667" class="small muted">Records + maintenance commands</text>
+  </g>
+
+  <g aria-label="TB4: firmware replacement through the ROM bootloader">
+    <path d="M 664 1560 V 1700" class="flow flash"/>
+    <rect x="430" y="1590" width="56" height="27" rx="7" fill="#efe2c7"/>
+    <text x="458" y="1609" class="badge amber">TB4</text>
+    <text x="502" y="1610" class="label">ROM flash</text>
+    <text x="430" y="1642" class="body">Firmware replacement ↓</text>
+    <text x="430" y="1667" class="small muted">USB bootloader access</text>
+  </g>
+
+  <g aria-label="Same ESP32 trust domain, maintenance view">
+    <rect x="40" y="1700" width="680" height="192" rx="16" fill="#edf3e8" stroke="#6f8e69" stroke-width="1.8"/>
+    <text x="72" y="1734" class="heading">ESP32 · same device, maintenance view</text>
+    <rect x="72" y="1754" width="272" height="102" rx="9" class="card"/>
+    <text x="208" y="1783" text-anchor="middle" class="label">USB command interface</text>
+    <text x="208" y="1809" text-anchor="middle" class="body">Settings → NVS</text>
+    <text x="208" y="1833" text-anchor="middle" class="small muted">Also emits JSONL reports</text>
+
+    <rect x="416" y="1754" width="272" height="102" rx="9" class="card"/>
+    <text x="552" y="1783" text-anchor="middle" class="label">ROM bootloader</text>
+    <text x="552" y="1809" text-anchor="middle" class="body">Writes application firmware</text>
+    <text x="552" y="1833" text-anchor="middle" class="small muted">Development access retained</text>
+    <text x="72" y="1879" class="small green">Both views share the same firmware, settings and UART authority.</text>
+  </g>
+
+  <text x="40" y="1926" class="small muted">Outlined panels = trust domains · TB1–TB5 = crossings to review.</text>
+</svg>

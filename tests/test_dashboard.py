@@ -109,26 +109,82 @@ class DeviceTests(unittest.TestCase):
         info={'id':key,'serial':key,'port':'/stable/'+key,'tty':'/dev/example'}
         return dashboard.Device(info,locator=lambda:{key:info},log_dir=tmp,start=start)
 
-    def test_identify_targets_usb_and_releases_locks_on_failure(self):
+    def test_identify_requires_supported_present_board_and_serializes_operations(self):
         with tempfile.TemporaryDirectory() as tmp:
             d=self.device(tmp)
             try:
                 with self.assertRaises(ValueError): d.identify()
                 d.status={'identify_supported':True}
-                d.monitoring=False
-                with patch.object(bench,'request') as request:
-                    d.identify()
-                    request.assert_called_once_with(d.info['port'],'identify',timeout=3)
-                self.assertFalse(d.monitoring)
-                with patch.object(bench,'request',side_effect=RuntimeError('USB lost')):
-                    with self.assertRaises(RuntimeError): d.identify()
-                self.assertFalse(d.pause.is_set())
-                self.assertFalse(d.operation_lock.locked())
-                self.assertFalse(d.port_lock.locked())
+                d.present=False
+                with self.assertRaises(RuntimeError): d.identify()
+                d.present=True
                 d.operation_lock.acquire()
                 with self.assertRaises(RuntimeError): d.identify()
                 d.operation_lock.release()
+                self.assertIsNone(d.identify_request)
             finally:d.log_handler.close()
+
+    def test_identify_uses_existing_reader_and_requires_active_status(self):
+        # Opening a new serial stream simulates a board reset. An Identify ACK
+        # alone must never count as success, and the reader must remain open.
+        for mode in ('ok','inactive','reboot','rejected','disconnect','paused'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as tmp:
+                opened=[]
+                class Stream:
+                    def __init__(self,port):
+                        self.port=port;self.pending=[];self.active=False;self.closed=False
+                    def __enter__(self):opened.append(self);return self
+                    def __exit__(self,*args):self.closed=True;self.active=False
+                    def emit(self,kind,token='',**extra):
+                        self.pending.append(dict(schema=1,kind=kind,receiver_id=self.port.split('/')[-1],
+                            session='boot'+str(len(opened)),request_id=token,**extra))
+                    def write(self,value):
+                        for line in value.decode().splitlines():
+                            parts=line.split()
+                            if not parts:continue
+                            token=parts[1] if len(parts)>1 else ''
+                            if parts[0]=='identify':
+                                if mode=='disconnect':raise OSError('USB lost')
+                                self.active=mode not in ('inactive','rejected')
+                                self.emit('reply',token,ok=mode!='rejected',message='rejected')
+                                if mode=='reboot':self.pending[-1]['session']='previous-boot'
+                            else:
+                                self.emit('status',token,identify_supported=True,identifying=self.active)
+                    def read(self,size):
+                        time.sleep(.01)
+                        data=b''.join((json.dumps(r)+'\n').encode() for r in self.pending)
+                        self.pending=[]
+                        return data
+                with patch.object(bench,'serial_modules',return_value=(SimpleNamespace(SerialException=OSError),None)), \
+                     patch.object(bench,'connect',side_effect=Stream) as connect:
+                    d=self.device(tmp)
+                    try:
+                        if mode=='paused':
+                            d.monitoring=False;d.status={'identify_supported':True}
+                        d.thread.start()
+                        if mode!='paused':
+                            deadline=time.monotonic()+2
+                            while not d.status and time.monotonic()<deadline:time.sleep(.01)
+                            self.assertTrue(d.status)
+                        if mode in ('ok','paused'):
+                            status=d.identify()
+                            self.assertTrue(status['identifying'])
+                            self.assertEqual(status['session'],'boot1')
+                            time.sleep(.05)
+                            self.assertFalse(opened[0].closed)
+                            self.assertTrue(d.wants_usb())
+                            self.assertEqual(d.monitoring,mode!='paused')
+                        else:
+                            message={'inactive':'did not enter Identify', 'reboot':'restarted',
+                                     'rejected':'rejected', 'disconnect':'USB monitoring stopped'}[mode]
+                            with self.assertRaisesRegex(RuntimeError,message):d.identify()
+                        self.assertEqual(connect.call_count,1)
+                        self.assertIsNone(d.identify_request)
+                        self.assertFalse(d.operation_lock.locked())
+                        self.assertFalse(d.pause.is_set())
+                        self.assertTrue(any(x['record']['kind']=='reply' for x in d.logs) or mode=='disconnect')
+                    finally:
+                        d.stop.set();d.thread.join(3)
 
     def test_new_session_clears_contacts_and_ring_is_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -190,9 +246,10 @@ class DeviceTests(unittest.TestCase):
 class HTTPTests(unittest.TestCase):
     def test_static_api_and_mutation_origin_guards(self):
         called=[]
+        identify_status={'identifying':True,'session':'boot'}
         device=SimpleNamespace(configure=lambda body: called.append(body) or 'job1',
             configure_uart=lambda body: called.append(body) or 'uart1',
-            identify=lambda:called.append('identify'))
+            identify=lambda:called.append('identify') or identify_status)
         manager=SimpleNamespace(token='test-token',snapshot=lambda:{'devices':[]},
             firmware=SimpleNamespace(info=lambda:{'available':False}),device=lambda key:device)
         base=server.handler_for(manager)
@@ -225,8 +282,10 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(request('POST','/api/devices/abc/uart',{'enabled':True},
             {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})[0],202)
         self.assertEqual(called[-1],{'enabled':True})
-        self.assertEqual(request('POST','/api/devices/abc/identify',{},
-            {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})[0],200)
+        code,body=request('POST','/api/devices/abc/identify',{},
+            {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})
+        self.assertEqual(code,200)
+        self.assertEqual(json.loads(body),{'ok':True,'status':identify_status})
         self.assertEqual(called[-1],'identify')
 
 

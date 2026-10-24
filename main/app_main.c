@@ -38,7 +38,22 @@ static char session[17];
 static _Atomic uint32_t usb_drops;
 static fc_config_t fc_config;
 static nvs_handle_t config;
-static int64_t identify_until; // Owned by the USB task; never persisted.
+// A 20 ms timer controls the LED independently of USB backpressure.
+static _Atomic uint32_t identify_ticks_remaining;
+
+static void led_tick(void *arg)
+{
+    (void)arg;
+    uint32_t ticks = atomic_load(&identify_ticks_remaining);
+    bool on;
+    if (ticks) {
+        on = ((250 - ticks) / 5) % 2 == 0; // 100 ms on, 100 ms off.
+        atomic_fetch_sub(&identify_ticks_remaining, 1);
+    } else {
+        on = esp_timer_get_time() % 2000000 < 100000;
+    }
+    gpio_set_level(BOARD_LED_GPIO, on ? BOARD_LED_ON_LEVEL : BOARD_LED_OFF_LEVEL);
+}
 
 static const char *role_name(bench_role_t value)
 {
@@ -67,8 +82,8 @@ static void status(const char *request_id)
         snprintf(hello_hex + 2 * i, 3, "%02x", (unsigned char)identity.hello[i]);
     int n = snprintf(line, sizeof(line),
         "{\"schema\":1,\"kind\":\"status\",\"receiver_id\":\"%s\",\"session\":\"%s\","
-        "\"request_id\":\"%s\",\"role\":\"%s\",\"firmware\":\"0.5.0\","
-        "\"identify_supported\":true,\"configuration_version\":1,\"broadcast_id\":\"%s\",\"hello_hex\":\"%s\","
+        "\"request_id\":\"%s\",\"role\":\"%s\",\"firmware\":\"0.5.2\","
+        "\"identifying\":%s,\"identify_supported\":true,\"configuration_version\":1,\"broadcast_id\":\"%s\",\"hello_hex\":\"%s\","
         "\"tx_transport\":\"%s\",\"rx_transports\":%s,\"rx_schedule\":\"%s\","
         "\"rx_phase\":\"%s\",\"radio_ready\":%s,\"bench_transmitter\":%s,"
         "\"uptime_us\":%" PRId64 ",\"free_heap_bytes\":%" PRIu32 ","
@@ -81,7 +96,7 @@ static void status(const char *request_id)
         "\"ble_listen_ms\":%" PRIu32 ",\"wifi_6_listen_ms\":%" PRIu32 ","
         "\"wifi_149_listen_ms\":%" PRIu32 ",\"uart\":%s}\n",
         receiver_id, session, request_id, role_name(role),
-        identity.id, hello_hex,
+        atomic_load(&identify_ticks_remaining) ? "true" : "false", identity.id, hello_hex,
         tx_transport == BENCH_TX_WIFI ? "wifi_beacon" : "ble_legacy",
         role == BENCH_TX ? "[]" : "[\"ble_legacy\",\"wifi_beacon\",\"wifi_nan\"]",
         role == BENCH_TX ? "disabled" : "time_sliced",
@@ -183,7 +198,7 @@ static void command(const char *line)
         return;
     }
     if (!strcmp(verb, "identify") && count <= 2 && valid_token(arg)) {
-        identify_until = esp_timer_get_time() + 5000000;
+        atomic_store(&identify_ticks_remaining, 250);
         reply(arg, true, "flashing LED for 5 seconds");
         return;
     }
@@ -241,9 +256,7 @@ static void usb_task(void *arg)
         }
         int64_t now = esp_timer_get_time();
         if (now >= next_status) { status(""); next_status = now + 2000000; }
-        if (!usb_serial_jtag_is_connected()) identify_until = 0;
-        bool led_on = now < identify_until ? now % 200000 < 100000 : now % 2000000 < 100000;
-        gpio_set_level(BOARD_LED_GPIO, led_on ? BOARD_LED_ON_LEVEL : BOARD_LED_OFF_LEVEL);
+
     }
 }
 
@@ -255,6 +268,12 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gpio_config(&led_config));
     ESP_ERROR_CHECK(gpio_set_level(BOARD_LED_GPIO, BOARD_LED_OFF_LEVEL));
+    esp_timer_handle_t led_timer;
+    const esp_timer_create_args_t led_timer_args = {
+        .callback = led_tick, .name = "board_led", .skip_unhandled_events = true,
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&led_timer_args, &led_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(led_timer, 20000));
     usb_serial_jtag_driver_config_t usb_config = {.rx_buffer_size = 512, .tx_buffer_size = 8192};
     ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_config));
     esp_err_t rc = nvs_flash_init();

@@ -172,6 +172,8 @@ class Device:
         self.error = None
         self.status = None
         self.status_at = None
+        self.identify_request = None
+        self.identify_hold_until = 0
         self.session = None
         self.contacts = Contacts()
         self.logs = deque(maxlen=MAX_LOGS)
@@ -209,6 +211,21 @@ class Device:
                 self.error = None
             elif record['kind'] == 'observation':
                 self.contacts.ingest(record, timestamp)
+            request = self.identify_request
+            if request and request['sent']:
+                if record.get('request_id') == request['token'] and record['kind'] == 'reply':
+                    if record.get('ok') is not True:
+                        self.finish_identify(error=record.get('message', 'Identify command rejected.'))
+                    else:
+                        request['reply'] = record
+                elif record.get('request_id') == request['status_token'] and record['kind'] == 'status':
+                    reply = request['reply']
+                    if not reply or reply.get('session') != record.get('session'):
+                        self.finish_identify(error='The board restarted before Identify could be confirmed.')
+                    elif record.get('identifying') is not True:
+                        self.finish_identify(error='The board did not enter Identify mode. Flash firmware 0.5.2 or newer.')
+                    else:
+                        self.finish_identify(result=record)
             self.log_cursor += 1
             self.logs.append({'cursor': self.log_cursor, 'record': record})
         try:
@@ -217,16 +234,40 @@ class Device:
             with self.lock:
                 self.error = f'Log file could not be written: {exc}'
 
+    def finish_identify(self, result=None, error=None):
+        with self.lock:
+            request = self.identify_request
+            if request is None:
+                return
+            request.update(result=result, error=error)
+            self.identify_request = None
+            # When monitoring was paused, keep USB open until flashing finishes.
+            self.identify_hold_until = time.monotonic() + 5 if result else 0
+            request['done'].set()
+
+    def wants_usb(self):
+        with self.lock:
+            return self.monitoring or self.identify_request is not None or time.monotonic() < self.identify_hold_until
+
+    def send_identify(self, stream):
+        with self.lock:
+            request = self.identify_request
+            if request and not request['sent']:
+                request['sent'] = True
+                # Both commands use the reader's existing port, with separate
+                # tokens so a successful ACK cannot masquerade as active flashing.
+                stream.write(f"\nidentify {request['token']}\nstatus {request['status_token']}\n".encode('ascii'))
+
     def reader(self):
         serial, _ = bench.serial_modules()
         while not self.stop.is_set():
-            if self.pause.is_set() or not self.monitoring or not self.present:
+            if self.pause.is_set() or not self.wants_usb() or not self.present:
                 self.closed.set()
                 self.stop.wait(.2)
                 continue
             if not self.port_lock.acquire(timeout=.2):
                 continue
-            if self.pause.is_set() or not self.monitoring or not self.present:
+            if self.pause.is_set() or not self.wants_usb() or not self.present:
                 self.port_lock.release()
                 continue
             self.closed.clear()
@@ -237,7 +278,8 @@ class Device:
                         self.connection = 'monitoring'
                         self.error = None
                     stream.write(b'\nstatus\n')
-                    while not self.stop.is_set() and not self.pause.is_set() and self.monitoring and self.present:
+                    while not self.stop.is_set() and not self.pause.is_set() and self.wants_usb() and self.present:
+                        self.send_identify(stream)
                         for record in decoder.feed(stream.read(2048)):
                             self.record(record)
             except (serial.SerialException, OSError) as exc:
@@ -245,6 +287,7 @@ class Device:
                     self.connection = 'waiting'
                     self.error = str(exc)
             finally:
+                self.finish_identify(error='USB monitoring stopped before Identify could be confirmed.')
                 self.closed.set()
                 self.port_lock.release()
                 with self.lock:
@@ -326,15 +369,16 @@ class Device:
                     raise RuntimeError('Connect this board over USB to identify it.')
                 if not self.status or not self.status.get('identify_supported'):
                     raise ValueError('Flash the current firmware to enable Identify.')
-            self.pause.set()
-            if not self.port_lock.acquire(timeout=3):
-                raise RuntimeError('USB monitor did not release the port.')
-            try:
-                bench.request(self.fresh_port(), 'identify', timeout=3)
-            finally:
-                self.port_lock.release()
+                request = {'token': secrets.token_hex(6), 'status_token': secrets.token_hex(6),
+                           'done': threading.Event(), 'sent': False, 'reply': None,
+                           'result': None, 'error': None}
+                self.identify_request = request
+            if not request['done'].wait(4):
+                self.finish_identify(error='No Identify confirmation from the board. Check the USB connection.')
+            if request['error']:
+                raise RuntimeError(request['error'])
+            return request['result']
         finally:
-            self.pause.clear()
             self.operation_lock.release()
 
     def configure(self, values):

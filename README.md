@@ -10,6 +10,10 @@ handles multiple USB boards, flashing, identity settings, and live reception.
 > broadcasts with signal strength. Start with USB-connected boards; add the
 > flight-controller UART connection when ready.
 
+Firmware **0.5.2** fixes USB identification timing by driving the LED from an
+independent timer, so USB traffic cannot stall the flashes. Introduced in 0.5.1, the web bench’s **Identify** button
+flashes the selected board’s user LED rapidly for five seconds.
+
 Firmware **0.5.0** adds a configurable UART/MAVLink 2 interface for forwarding
 observations through a flight controller to a custom base-station parser.
 USB remains versioned JSONL. The first controller target is the **MicoAir H743
@@ -440,7 +444,7 @@ idf.py -p /dev/ttyACM0 flash
 
 Select each board's actual port. On Linux, `/dev/serial/by-id/...` paths are
 preferable when multiple boards are connected. Flash the same image to every
-board. Application version: `0.5.0`; flash size: 8 MB; PSRAM is not needed.
+board. Application version: `0.5.2`; flash size: 8 MB; PSRAM is not needed.
 The custom partition table provides a 2 MB app partition and preserves the old
 NVS/PHY addresses. Flash the partition table as well as the app when upgrading.
 

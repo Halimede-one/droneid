@@ -54,6 +54,13 @@ configuration is reported yet.
 
 ## Watch the devices
 
+Click **Identify** beside the selected board's name to flash its user LED at
+5 Hz for five seconds. Use firmware 0.5.2 or newer. The command uses the existing
+USB monitor connection so opening another port cannot reset the board and cancel
+the flashing. The button shows **Identifying…** only after the board confirms
+that mode is active. If monitoring is paused, Identify briefly opens USB and
+keeps it open until the flashing finishes, preserving the paused setting.
+
 **Nearby broadcasts** is the default view. It draws the selected receiver and
 observed sources, with their claimed IDs, hello messages, RSSI in dBm, and recent
 signal history. It is a schematic: signal strength does not establish distance
