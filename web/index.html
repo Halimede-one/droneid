@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DroneID · Radio bench</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="DroneID home"><span class="brand-symbol">⌁</span><span>DroneID<small>RADIO BENCH</small></span></a>
+    <div class="sidebar-heading"><span>USB DEVICES</span><span id="device-count" class="count">0</span></div>
+    <div id="devices" class="devices"><p class="muted">Looking for connected boards…</p></div>
+    <div class="sidebar-foot"><span class="status-dot" id="server-dot"></span><span id="server-state">Connecting to local server</span><small>Seeed XIAO · ESP32-C5</small></div>
+  </aside>
+  <main>
+    <header class="page-heading"><div><div class="eyebrow">WORKSPACE / USB LAB</div><h1>Radio bench<span class="heading-dot">.</span></h1><p>Configure your boards. See what they hear.</p></div><button class="button secondary" id="refresh">↻ Refresh devices</button></header>
+    <div id="error" class="error-banner" role="alert" hidden></div>
+    <section id="no-device" class="welcome" hidden><div class="welcome-icon">⌁</div><h2>Connect your first board</h2><p>Plug a XIAO ESP32-C5 into USB. It will appear here automatically.</p><p class="muted">Use a data cable. Close other serial monitors to make the port available.</p></section>
+    <section id="workspace" hidden>
+      <div class="device-heading"><div><span class="eyebrow">SELECTED DEVICE</span><h2 id="selected-name"></h2><div id="selected-meta" class="muted mono"></div></div><div class="device-actions"><span id="device-state" class="badge"></span><button id="monitor-toggle" class="button secondary">Pause monitor</button></div></div>
+      <nav class="tabs" role="tablist" aria-label="Device views"><button id="tab-nearby" role="tab" aria-selected="true" aria-controls="panel-nearby" data-tab="nearby">Nearby broadcasts <span id="nearby-count" class="tab-count">0</span></button><button id="tab-logs" role="tab" aria-selected="false" aria-controls="panel-logs" data-tab="logs">Live log</button><button id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" data-tab="settings">Device settings</button></nav>
+      <section id="panel-nearby" role="tabpanel" aria-labelledby="tab-nearby">
+        <div class="metrics"><div><span>ACTIVE SOURCES</span><strong id="metric-active">0</strong></div><div><span>STRONGEST SIGNAL</span><strong id="metric-rssi">—<small>dBm</small></strong></div><div><span>RECEIVED RECORDS</span><strong id="metric-received">0</strong></div><div><span>LISTENING</span><strong id="metric-radio" class="metric-text">BLE + Wi-Fi</strong></div></div>
+        <div class="radio-view"><div class="view-heading"><div><h3>Radio links</h3><p>Observed by this device · updates live</p></div><span class="legend"><i></i> Seen in the last 5 seconds</span></div><div class="radio-graph"><div class="receiver-wrap"><div class="receiver" id="receiver"></div><p class="receiver-caption">THIS RECEIVER</p></div><div id="contacts" class="contacts"></div></div><div class="view-foot"><span>Signal strength is not distance. This is a schematic view.</span><span id="scan-state"></span></div></div>
+        <div id="health" class="health"></div>
+      </section>
+      <section id="panel-logs" role="tabpanel" aria-labelledby="tab-logs" hidden>
+        <div class="log-toolbar"><div><h3>Received stream</h3><p id="log-caption">Live USB records from the selected device</p></div><div class="toolbar-controls"><label class="sr-only" for="log-filter">Filter records</label><select id="log-filter"><option value="all">All records</option><option value="observation">Observations</option><option value="status">Status</option><option value="reply">Replies</option></select><button id="log-pause" class="button secondary">Pause scroll</button><a id="download" class="button secondary" href="#">Download recent log</a></div></div>
+        <pre id="log-stream" tabindex="0" aria-label="Live JSON log"></pre><p class="fine-print">The view keeps the latest 500 records. Full captures rotate in logs/web on this computer.</p>
+      </section>
+      <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <div class="settings-grid"><form id="settings-form" class="panel"><div class="panel-top"><span class="eyebrow">CONFIGURATION</span><h3>Identity & broadcast</h3><p>Saved on the board, including when powered without USB.</p></div><div id="upgrade-note" class="notice" hidden>Flash the current firmware to enable ID and hello-message settings.</div><fieldset id="settings-fields"><label for="broadcast-id">Broadcast ID <span>19 characters max</span></label><input id="broadcast-id" name="broadcast_id" maxlength="19" pattern="[A-Za-z0-9._\-]{1,19}" required placeholder="SCOUT-01" autocomplete="off"><p class="field-help">Letters, numbers, dots, underscores, and hyphens.</p><label for="hello">Hello message <span id="hello-count">0 / 23</span></label><input id="hello" name="hello" maxlength="23" placeholder="Hello from scout 01" autocomplete="off"><p class="field-help">Short public message. Use printable ASCII characters.</p><div class="form-row"><div><label for="role">Operating mode</label><select id="role" name="role"><option value="both">Receive + broadcast</option><option value="rx">Receive only</option><option value="tx">Broadcast only</option></select></div><div><label for="transport">Broadcast using</label><select id="transport" name="transport"><option value="wifi">Wi-Fi Beacon</option><option value="ble">Bluetooth LE</option></select></div></div><p class="field-help mode-help">Receive mode listens on BLE and Wi-Fi. Broadcasting uses only the selected protocol.</p><div class="form-actions"><span id="save-state" class="muted">All changes saved</span><button type="submit" id="save" class="button primary">Save to device</button></div></fieldset></form>
+        <div class="panel firmware-panel"><div class="panel-top"><span class="eyebrow">FIRMWARE</span><h3>Program this board</h3><p>Install the local project build on the selected USB device.</p></div><div class="firmware-art"><svg viewBox="0 0 120 90" aria-hidden="true"><path d="M20 26h18m-18 12h18m-18 12h18m-18 12h18m44-36h18M82 38h18M82 50h18M82 62h18M46 8v14m14-14v14m14-14v14M46 68v14m14-14v14m14-14v14"/><rect x="36" y="20" width="48" height="50" rx="7"/><path d="m54 34 15 11-15 11z"/></svg><span>ESP32-C5</span></div><dl class="firmware-info"><div><dt>Available build</dt><dd id="build-version">—</dd></div><div><dt>Running firmware</dt><dd id="running-version">—</dd></div><div><dt>Target USB serial</dt><dd id="flash-serial" class="mono">—</dd></div></dl><p id="build-note" class="field-help"></p><button id="flash" class="button dark">↓ Flash this device</button><p class="fine-print">Saved identity and settings are preserved. Other boards keep monitoring.</p></div></div>
+        <form id="uart-form" class="panel uart-panel">
+          <div class="panel-top"><span class="eyebrow">FLIGHT CONTROLLER</span><h3>UART · MAVLink 2</h3><p>Send received identities and signal measurements to your downlink. USB monitoring stays available.</p><a class="guide-link" href="/README.md" target="_blank" rel="noreferrer">Wiring & setup instructions ↗</a></div>
+          <p id="uart-upgrade" class="notice" hidden>Flash firmware 0.5.0 or newer to configure UART.</p>
+          <div id="uart-health" class="uart-health" aria-live="polite"></div>
+          <fieldset id="uart-fields">
+            <div class="form-row"><div><label for="uart-enabled">UART output</label><select id="uart-enabled" name="enabled"><option value="false">Disabled</option><option value="true">Enabled · MAVLink 2</option></select></div><div><label for="uart-baud">Baud rate</label><select id="uart-baud" name="baud"><option>57600</option><option>115200</option><option>230400</option><option>460800</option></select></div></div>
+            <p class="field-help">Default wiring: D6 / GPIO11 TX → controller RX, D7 / GPIO12 RX ← controller TX, and common GND. 3.3 V UART signals.</p>
+            <div class="form-row"><div><label for="uart-system-id">Vehicle system ID</label><input id="uart-system-id" name="system_id" type="number" min="1" max="255" required></div><div><label for="uart-component-id">Module component ID</label><input id="uart-component-id" name="component_id" type="number" min="1" max="255" required></div></div>
+            <p class="field-help">Match the controller’s vehicle ID. Give this module a component ID unused by other equipment.</p>
+            <details class="uart-advanced"><summary>Pins, destination & report rate</summary>
+              <div class="form-row"><div><label for="uart-tx-pin">Module TX pin</label><select id="uart-tx-pin" name="tx_pin"></select></div><div><label for="uart-rx-pin">Module RX pin</label><select id="uart-rx-pin" name="rx_pin"></select></div></div>
+              <div class="form-row"><div><label for="uart-target-system">Base-station system ID</label><input id="uart-target-system" name="target_system" type="number" min="0" max="255" required></div><div><label for="uart-target-component">Base-station component ID</label><input id="uart-target-component" name="target_component" type="number" min="0" max="255" required></div></div>
+              <div class="form-row"><div><label for="uart-fc-component-id">Controller component ID</label><input id="uart-fc-component-id" name="fc_component_id" type="number" min="1" max="255" required></div><div><label for="uart-max-rate">Observation limit / second</label><input id="uart-max-rate" name="max_rate" type="number" min="1" max="50" required></div></div>
+              <p class="field-help">Default destination: 255 / 190. Reports require a MAVLink 2 forwarding path to the base station. Stock iNav forwarding is not implemented here.</p>
+            </details>
+            <div class="form-actions"><span id="uart-save-state" class="muted">All UART changes saved</span><button id="uart-save" class="button primary" type="submit">Save UART settings</button></div>
+          </fieldset>
+        </form>
+      </section>
+      <section id="job-panel" class="job-panel" hidden aria-live="polite"><div><span id="job-icon"></span><strong id="job-title"></strong><span id="job-message" class="muted"></span></div><details><summary>Operation output</summary><pre id="job-output"></pre></details></section>
+    </section>
+    <footer>DRONEID BENCH <span>Local USB workspace · experimental broadcasts</span></footer>
+  </main>
+</body>
+</html>

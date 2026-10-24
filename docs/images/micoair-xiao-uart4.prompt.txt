@@ -1,0 +1,39 @@
+Create a polished, technically precise annotated wiring illustration for this project's README, based on the FIVE attached reference images. Use the actual board appearance from the supplied photos; preserve board geometry and recognizable components, never invent a connector or relocate pins. This is a wiring guide, so exact physical callout locations, electrical mapping, and readable text matter more than decoration.
+
+OUTPUT: one high-resolution landscape engineering poster, approximately 3:2 or 16:10, with generous whitespace, warm ivory background, dark teal typography, restrained cyan/amber/red accents, crisp photographic board cutouts and clean vector-style annotations. Visually stylish but practical, suitable for GitHub documentation. Title: "DroneID / UART4 wiring". Subtitle: "MicoAir H743 V2 AIO ↔ Seeed Studio XIAO ESP32-C5". Do not include a 35A or 45A rating in the title.
+
+REFERENCES:
+Image 1 is the front photograph of XIAO ESP32-C5, USB connector up. Image 2 is its FRONT pin map, authoritative for XIAO pad positions. Image 3 is its back map; do not use the mirrored back positions in the front view. Image 4 is MicoAir's wiring diagram, whose bottom board shows the UART4 connector and its logical breakout Rx4, Tx4, 5V, GND. Image 5 contains two MicoAir board photographs: use the UNDERSIDE board on the RIGHT half, with the white UART4 connector on its right edge near bottom-right, not the other board's DJI connector.
+
+LAYOUT:
+MicoAir underside photo on the left, XIAO front photo on the right, with clearly labeled orientation captions. Highlight the MicoAir's existing white UART4 connector at the lower-right edge with a thin cyan outline and a leader to a larger FOUR-SIGNAL LOGICAL BREAKOUT in the central area. The breakout is an explanatory schematic, NOT a drawing of cable-end pin numbers. Caption it "UART4 signal breakout · verify connector orientation". Labels in top-to-bottom order RX4, TX4, 5V, GND. Do not claim a physical pin numbering or label another FC connector as UART4.
+
+XIAO EXACT CALLOUT LOCATIONS with USB UP:
+- D6 / GPIO11 / TX: bottom-most LEFT edge pad (7th pad down).
+- D7 / GPIO12 / RX: bottom-most RIGHT edge pad (7th pad down).
+- VBUS / 5V: TOP-most RIGHT edge pad.
+- GND: SECOND RIGHT edge pad down from the top.
+- 3V3 OUT: THIRD RIGHT edge pad down; leave unconnected.
+Put clearly readable labels adjacent to each used XIAO pad, small colored ring markers centered on the correct pad, and label USB at top. Keep board photo unobscured.
+
+ELECTRICAL CONNECTIONS, exactly four lines:
+1. Solid CYAN line from XIAO D6 / GPIO11 TX to MicoAir RX4. Arrow points toward RX4. Label "Reports → FC".
+2. Solid AMBER line from MicoAir TX4 to XIAO D7 / GPIO12 RX. Arrow points toward XIAO RX. Label "Telemetry → XIAO".
+3. Solid GRAPHITE line from MicoAir GND to XIAO GND. Label "Common ground". No data arrow required.
+4. DASHED RED line from MicoAir 5V to XIAO VBUS / 5V. Label "Optional 5 V power". Draw separate from main signals. Arrow points toward XIAO.
+Wires should use clean routed paths with rounded corners and no ambiguous junctions or overlapping labels; any crossings must clearly NOT be junctions. Every wire must terminate at the named actual XIAO pad, not on a nearby component.
+
+A small readable connection legend can repeat:
+"D6 / GPIO11 TX → RX4"
+"D7 / GPIO12 RX ← TX4"
+"GND ↔ GND"
+"VBUS / 5V ← 5V (optional)"
+This legend must match the wires exactly.
+
+Footer with three compact, well-separated notes:
+"115200 baud · 8N1 · 3.3 V UART logic"
+"USB bench: connect TX + RX + GND only. Leave 5 V disconnected."
+"Vehicle power: disconnect XIAO USB power before connecting FC 5 V."
+And a smaller short note:
+"UART4 must be free; the reference diagram assigns it to optical flow. Leave XIAO 3V3 OUT unconnected. Do not use the DJI 12 V connector."
+Do not show motors, batteries, Raspberry Pi or extra peripherals; only the two board views and the described wiring. No fake measurements, no distance estimates, no extra signal wires, no invented physical pins. Clearly indicate "Views not to scale".
