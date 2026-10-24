@@ -317,6 +317,26 @@ class Device:
         threading.Thread(target=run, daemon=True, name=kind+'-'+self.info['id']).start()
         return job_id
 
+    def identify(self):
+        if not self.operation_lock.acquire(blocking=False):
+            raise RuntimeError('This board already has an operation in progress.')
+        try:
+            with self.lock:
+                if not self.present:
+                    raise RuntimeError('Connect this board over USB to identify it.')
+                if not self.status or not self.status.get('identify_supported'):
+                    raise ValueError('Flash the current firmware to enable Identify.')
+            self.pause.set()
+            if not self.port_lock.acquire(timeout=3):
+                raise RuntimeError('USB monitor did not release the port.')
+            try:
+                bench.request(self.fresh_port(), 'identify', timeout=3)
+            finally:
+                self.port_lock.release()
+        finally:
+            self.pause.clear()
+            self.operation_lock.release()
+
     def configure(self, values):
         command = bench.configuration_command(values.get('role'), values.get('transport'), values.get('broadcast_id'), values.get('hello'))
         with self.lock:

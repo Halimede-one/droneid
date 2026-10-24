@@ -38,6 +38,7 @@ static char session[17];
 static _Atomic uint32_t usb_drops;
 static fc_config_t fc_config;
 static nvs_handle_t config;
+static int64_t identify_until; // Owned by the USB task; never persisted.
 
 static const char *role_name(bench_role_t value)
 {
@@ -67,7 +68,7 @@ static void status(const char *request_id)
     int n = snprintf(line, sizeof(line),
         "{\"schema\":1,\"kind\":\"status\",\"receiver_id\":\"%s\",\"session\":\"%s\","
         "\"request_id\":\"%s\",\"role\":\"%s\",\"firmware\":\"0.5.0\","
-        "\"configuration_version\":1,\"broadcast_id\":\"%s\",\"hello_hex\":\"%s\","
+        "\"identify_supported\":true,\"configuration_version\":1,\"broadcast_id\":\"%s\",\"hello_hex\":\"%s\","
         "\"tx_transport\":\"%s\",\"rx_transports\":%s,\"rx_schedule\":\"%s\","
         "\"rx_phase\":\"%s\",\"radio_ready\":%s,\"bench_transmitter\":%s,"
         "\"uptime_us\":%" PRId64 ",\"free_heap_bytes\":%" PRIu32 ","
@@ -181,9 +182,14 @@ static void command(const char *line)
         status(arg);
         return;
     }
+    if (!strcmp(verb, "identify") && count <= 2 && valid_token(arg)) {
+        identify_until = esp_timer_get_time() + 5000000;
+        reply(arg, true, "flashing LED for 5 seconds");
+        return;
+    }
     if ((strcmp(verb, "role") && strcmp(verb, "transport")) ||
         count < 2 || count > 3 || !valid_token(token)) {
-        reply("", false, "commands: status; role rx|tx|both; transport wifi|ble; optional token");
+        reply("", false, "commands: status; identify; role rx|tx|both; transport wifi|ble; optional token");
         return;
     }
     uint8_t selected;
@@ -235,8 +241,9 @@ static void usb_task(void *arg)
         }
         int64_t now = esp_timer_get_time();
         if (now >= next_status) { status(""); next_status = now + 2000000; }
-        gpio_set_level(BOARD_LED_GPIO,
-                       now % 2000000 < 100000 ? BOARD_LED_ON_LEVEL : BOARD_LED_OFF_LEVEL);
+        if (!usb_serial_jtag_is_connected()) identify_until = 0;
+        bool led_on = now < identify_until ? now % 200000 < 100000 : now % 2000000 < 100000;
+        gpio_set_level(BOARD_LED_GPIO, led_on ? BOARD_LED_ON_LEVEL : BOARD_LED_OFF_LEVEL);
     }
 }
 

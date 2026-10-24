@@ -8,6 +8,7 @@ let token = '', firmware = {}, events, online = false, logRows = [], logCursor =
 const drafts = new Map(), completed = new Set();
 const uartDrafts = new Map();
 const pendingMonitors = new Set();
+const identifying = new Set();
 const uartDefaults = {enabled:false,baud:115200,tx_pin:11,rx_pin:12,system_id:1,component_id:242,fc_component_id:1,target_system:255,target_component:190,max_rate:5};
 const uartField = key => $('uart-'+key.replaceAll('_','-'));
 const uartSettings = d => Object.fromEntries(Object.entries(uartDefaults).map(([k,v])=>[k,d.status?.uart?.[k]??v]));
@@ -91,6 +92,9 @@ function render() {
   $('device-state').classList.toggle('offline',!live);
   $('monitor-toggle').textContent=d.monitoring?'Pause monitor':'Start monitor';
   $('monitor-toggle').disabled=!online||!d.present||busy(d)||pendingMonitors.has(d.id);
+  $('identify').disabled=!online||!d.present||busy(d)||!d.status?.identify_supported||identifying.has(d.id);
+  $('identify').textContent=identifying.has(d.id)?'Identifying…':'Identify';
+  $('identify').title=d.status?.identify_supported?'Flash this board’s LED for 5 seconds over USB':'Flash the current firmware to enable Identify';
   $('download').href=`/api/devices/${d.id}/download`;
   renderNearby(d,live); renderSettings(d); renderUart(d); renderJob(d);
   if(d.error && !busy(d)) { error(d.error); previousDeviceError=d.error; }
@@ -229,6 +233,14 @@ $('monitor-toggle').addEventListener('click',async()=>{
   pendingMonitors.add(d.id);render();
   try{await api(`/api/devices/${d.id}/monitor`,{enabled:!d.monitoring});error(null);await refresh();}catch(e){error(e.message);}
   finally{pendingMonitors.delete(d.id);render();}
+});
+$('identify').addEventListener('click',async()=>{
+  const d=current();if(!d||$('identify').disabled)return;
+  identifying.add(d.id);render();
+  try{
+    await api(`/api/devices/${d.id}/identify`,{});error(null);
+    setTimeout(()=>{identifying.delete(d.id);render();},5000);
+  }catch(e){identifying.delete(d.id);error(e.message);render();}
 });
 $('refresh').addEventListener('click',refresh);
 $('log-filter').addEventListener('change',renderLogs);

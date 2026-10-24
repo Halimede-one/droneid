@@ -16,6 +16,11 @@ USB remains versioned JSONL. The first controller target is the **MicoAir H743
 V2 AIO**, using UART4 in the example below. Physical wiring and end-to-end
 forwarding still need testing on the actual controller and installed firmware.
 
+**Security:** read the [threat model](threatmodel/README.md) before connecting the
+module to a flight controller. Received IDs are unverified claims; the model
+covers radio interference, ESP32 compromise, the UART trust boundary, and the
+web bench, with a prioritized hardening plan and reproducible offline checks.
+
 ## Flight-controller wiring and UART setup
 
 Setup links: [ESP32](#configure-the-esp32) ·
@@ -252,6 +257,11 @@ for forwarding this module's TUNNEL reports to another port. If the existing
 downlink already uses iNav's one MAVLink telemetry output, keep it allocated
 there and plan a gateway or firmware extension before adding this UART4 profile.
 
+**Security boundary:** the reference iNav telemetry port also processes incoming
+MAVLink. “Telemetry Output” does not make it read-only. See the
+[FC threat analysis](threatmodel/threat-register.md#tm-04--compromised-esp32-pivots-into-the-flight-controller)
+and [one-way wiring or guard options](threatmodel/hardening-plan.md#p0--contain-the-flight-controller-boundary).
+
 1. Connect the **FC USB** to the matching iNav Configurator. In **CLI**, run
    `version` and `diff all`; save the output with the current configuration.
    Leave CLI and open **Ports**.
@@ -455,7 +465,7 @@ In an ESP-IDF terminal, after [building the firmware](#build-and-flash):
 
 ```sh
 python -m pip install -r tools/requirements.txt
-python tools/server.py
+./start-web
 ```
 
 Open **http://127.0.0.1:8766**. Select a connected board in the sidebar. The
@@ -463,6 +473,11 @@ default view shows nearby broadcast IDs, hello messages, and measured signal
 strength. **Live log** shows its USB JSONL stream; **Device settings** lets you
 flash the local build and save an ID, hello message, role, and broadcast transport.
 Other boards keep monitoring while the selected board is programmed.
+
+The Linux launcher stops any existing web server from this checkout before
+starting a fresh one. It also finds servers started directly with `tools/server.py`.
+Run `./start-web --port 8767` to choose a different port; Ctrl+C stops the server.
+Use your activated Python environment with the dependencies installed.
 
 Close other serial monitors before starting the server. Use `--port 8767` if
 8766 is occupied. See the [web bench guide](docs/web-bench.md) for first-time
@@ -538,5 +553,8 @@ Hardware verification results are recorded in the USB bench guide.
 | `tools/server.py`, `tools/dashboard.py` | Local HTTP service, independent USB readers, flash/configuration jobs |
 | `web/` | Browser dashboard; plain HTML, CSS, and JavaScript |
 | `tests/` | Portable codec/stream tests |
+| [Threat model](threatmodel/README.md) | Security boundaries, threat register, hardening priorities and offline evidence |
 | [Project definition](docs/project-definition.md) | Overall scope and development milestones |
 | [Flight-controller integration](docs/flight-controller-integration.md) | Planned UART/MAVLink interface |
+
+The selected device’s **Identify** button flashes its user LED rapidly for five seconds over USB, then restores the normal heartbeat. Flash the current firmware to enable it.

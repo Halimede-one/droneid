@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Restart this checkout's USB web server, forwarding all server arguments."""
+
+import os
+from pathlib import Path
+import signal
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parent
+SERVER = ROOT / 'tools' / 'server.py'
+
+
+def is_server(pid):
+    """Match the script path, including servers launched with relative paths."""
+    try:
+        process = Path('/proc') / str(pid)
+        args = (process / 'cmdline').read_bytes().split(b'\0')
+        cwd = (process / 'cwd').resolve(strict=True)
+        # Python's script is the first argument after interpreter options.
+        # Do not match shell commands or arbitrary arguments containing the path.
+        if not Path(os.fsdecode(args[0])).name.startswith('python'):
+            return False
+        for raw in args[1:]:
+            arg = os.fsdecode(raw)
+            if arg in ('-c', '-m'):
+                return False
+            if arg.startswith('-'):
+                continue
+            return (cwd / arg).resolve() == SERVER
+    except (OSError, IndexError):
+        pass
+    return False
+
+
+def main():
+    if not Path('/proc/self/cmdline').exists():
+        sys.exit('This launcher requires Linux /proc.')
+    # Check dependencies before stopping a working server.
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import bench
+    bench.serial_modules()
+    from importlib.util import find_spec
+    if find_spec('esptool') is None:
+        sys.exit('Install dependencies: python3 -m pip install -r tools/requirements.txt')
+
+    pids = [int(p.name) for p in Path('/proc').iterdir()
+            if p.name.isdigit() and int(p.name) != os.getpid() and is_server(int(p.name))]
+    for pid in pids:
+        print(f'Stopping existing DroneID web server (PID {pid})…', flush=True)
+        try:
+            os.kill(pid, signal.SIGINT)
+        except ProcessLookupError:
+            pass
+    deadline = time.monotonic() + 5
+    while any(is_server(pid) for pid in pids) and time.monotonic() < deadline:
+        time.sleep(.1)
+    for pid in pids:
+        if is_server(pid):
+            os.kill(pid, signal.SIGKILL)
+    deadline = time.monotonic() + 2
+    while any(is_server(pid) for pid in pids) and time.monotonic() < deadline:
+        time.sleep(.05)
+    os.chdir(ROOT)
+    os.execv(sys.executable, [sys.executable, str(SERVER), *sys.argv[1:]])
+
+
+if __name__ == '__main__':
+    main()

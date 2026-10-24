@@ -115,6 +115,9 @@ def handler_for(manager):
                     job = device.configure_uart(body)
                 elif parts[3] == 'flash':
                     job = device.flash(manager.firmware, body.get('fingerprint'))
+                elif parts[3] == 'identify':
+                    device.identify()
+                    self.send_json(200, {'ok':True}); return
                 elif parts[3] == 'monitor':
                     if type(body.get('enabled')) is not bool: raise ValueError('enabled must be boolean.')
                     device.set_monitoring(body['enabled'])

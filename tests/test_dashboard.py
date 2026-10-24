@@ -109,6 +109,27 @@ class DeviceTests(unittest.TestCase):
         info={'id':key,'serial':key,'port':'/stable/'+key,'tty':'/dev/example'}
         return dashboard.Device(info,locator=lambda:{key:info},log_dir=tmp,start=start)
 
+    def test_identify_targets_usb_and_releases_locks_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d=self.device(tmp)
+            try:
+                with self.assertRaises(ValueError): d.identify()
+                d.status={'identify_supported':True}
+                d.monitoring=False
+                with patch.object(bench,'request') as request:
+                    d.identify()
+                    request.assert_called_once_with(d.info['port'],'identify',timeout=3)
+                self.assertFalse(d.monitoring)
+                with patch.object(bench,'request',side_effect=RuntimeError('USB lost')):
+                    with self.assertRaises(RuntimeError): d.identify()
+                self.assertFalse(d.pause.is_set())
+                self.assertFalse(d.operation_lock.locked())
+                self.assertFalse(d.port_lock.locked())
+                d.operation_lock.acquire()
+                with self.assertRaises(RuntimeError): d.identify()
+                d.operation_lock.release()
+            finally:d.log_handler.close()
+
     def test_new_session_clears_contacts_and_ring_is_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
             d=self.device(tmp)
@@ -170,7 +191,8 @@ class HTTPTests(unittest.TestCase):
     def test_static_api_and_mutation_origin_guards(self):
         called=[]
         device=SimpleNamespace(configure=lambda body: called.append(body) or 'job1',
-            configure_uart=lambda body: called.append(body) or 'uart1')
+            configure_uart=lambda body: called.append(body) or 'uart1',
+            identify=lambda:called.append('identify'))
         manager=SimpleNamespace(token='test-token',snapshot=lambda:{'devices':[]},
             firmware=SimpleNamespace(info=lambda:{'available':False}),device=lambda key:device)
         base=server.handler_for(manager)
@@ -203,6 +225,9 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(request('POST','/api/devices/abc/uart',{'enabled':True},
             {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})[0],202)
         self.assertEqual(called[-1],{'enabled':True})
+        self.assertEqual(request('POST','/api/devices/abc/identify',{},
+            {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})[0],200)
+        self.assertEqual(called[-1],'identify')
 
 
 if __name__=='__main__':unittest.main()
