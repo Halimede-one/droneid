@@ -130,3 +130,28 @@ A longer check exposed long gaps with a fixed Wi-Fi channel order. Firmware
 records at the last sample, with zero radio errors. The largest sampled source
 ages were 5.11 and 5.99 seconds. These are sampled bench results, not a range or
 maximum update-gap guarantee.
+
+## Scout and Guard roles
+
+Open **Device settings** on the selected USB device and choose **Guard** to provision a dedicated C5,
+C6 or S3 guard. Choose the physical model, build its profile, refresh, then install
+that guard firmware. The USB check verifies fresh diagnostics and the boot policy
+self-test. The wired test requires two 3.3 V USB UART adapters and a fixture with
+no radio or flight controller attached. Each device keeps its own operation log;
+other USB boards continue monitoring.
+
+See the [compatibility matrix](../guard/README.md#supported-xiao-models) and
+[guard flashing and fixture instructions](../guard/README.md#web-bench-flash-and-test-guards).
+Candidate boards without a firmware port are listed but cannot be flashed.
+These checks do not replace full hardware/FC acceptance or authenticate firmware.
+
+Role choice is a per-device draft, separate from the displayed running role.
+Switching the selector sends no command to the device. Click **Install Scout
+firmware** or **Install Guard firmware** to install the chosen application.
+Guard diagnostics and UART tests appear within Device settings when Guard is
+selected; Nearby broadcasts and Live log remain the other two tabs.
+
+Converting a Guard into a Scout removes its UART filtering and requires a C5.
+Disconnect both UART links before changing roles. C6/S3 are guard-only profiles
+in this project. A failed or unverified conversion retains the server's remembered
+guard role; the ordinary radio-flash API cannot silently replace a guard.

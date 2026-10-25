@@ -1,0 +1,5 @@
+-r ../tools/requirements-mavlink.txt
+empy==3.3.4
+future==1.0.0
+pexpect==4.9.0
+setuptools==80.9.0

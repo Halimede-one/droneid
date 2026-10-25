@@ -1,0 +1,146 @@
+{
+  "review_date": "2026-10-24",
+  "guard_fix": {
+    "affected_versions": [
+      "0.2.0"
+    ],
+    "fixed_version": "0.2.1",
+    "affected_models": [
+      "xiao_esp32c5",
+      "xiao_esp32c6"
+    ],
+    "cause": "esp_efuse_mac_get_default writes EUI-64 on IEEE 802.15.4 targets into a six-byte buffer",
+    "fix": "esp_read_mac(mac, ESP_MAC_EFUSE_FACTORY) explicitly reads MAC-48",
+    "observed_usb_serial": "38:44:BE:BE:0C:20",
+    "observed_wrong_receiver_id": "3844befeffbe",
+    "observed_version": "0.2.0",
+    "observed_app_sha256": "72630f53814a194e89f47edb3d40911b6759ea21803badbefd7e72de95d46fb0",
+    "fixed_firmware_installed": true,
+    "remote_exploit_demonstrated": false,
+    "legacy_identity_role_regression": "passed; guard role retained and invalid status rejected",
+    "installed_usb_serial": "38:44:BE:BE:0C:20",
+    "usb_startup_verification": "passed",
+    "installation_evidence": "p0-guard-usb-install.json"
+  },
+  "builds": [
+    {
+      "board_id": "xiao_esp32c5",
+      "version": "0.2.1",
+      "chip": "esp32c5",
+      "flash_size": "8MB",
+      "fingerprint": "81c1b30044fdf18f3f6dc35a3d575825a811076a02a97512014f1334c38cc7c2",
+      "app_sha256": "2f8ba351fccf70d43090420621344a6cb02561c4684d4251d47ec3d588b648dc",
+      "size": 235344
+    },
+    {
+      "board_id": "xiao_esp32c6",
+      "version": "0.2.1",
+      "chip": "esp32c6",
+      "flash_size": "4MB",
+      "fingerprint": "79a3ff591abe1d44699625b805aa94a54fc01bab67d09bec1f22a0ccac29c57e",
+      "app_sha256": "a5eb028243d33e847ced224895b28d42ff96c6488d3c5d193f316f4700d248f9",
+      "size": 225616
+    },
+    {
+      "board_id": "xiao_esp32s3",
+      "version": "0.2.1",
+      "chip": "esp32s3",
+      "flash_size": "8MB",
+      "fingerprint": "c3f4007394848b15a3985ed4f6f3308152e12a25de470f9973e254fc1231f3bc",
+      "app_sha256": "b019f4a0bf5d5b5bc08f2fdf86f181a0718a94fcf3c4446fbd04b5455dec1882",
+      "size": 236176
+    }
+  ],
+  "host_tests": {
+    "python": 42,
+    "sanitizer_executables": 6,
+    "result": "passed",
+    "log": "p0-closure-host-tests.txt"
+  },
+  "hardware_inventory": {
+    "native_xiao_usb_devices": 3,
+    "usb_uart_fixture_adapters": 0,
+    "fc_usb_detected": false,
+    "scope": "USB enumeration does not establish whether an FC or UART harness is physically attached",
+    "user_setup_confirmation": {
+      "dedicated_guard_usb_serial": "38:44:BE:BE:0C:20",
+      "fc_harness_ready": false,
+      "measurement_equipment_available": "unconfirmed",
+      "fixture_adapters_available": "unconfirmed; none enumerated on USB"
+    }
+  },
+  "p0_deployment_status": "pending_full_validation",
+  "hardware_acceptance": "USB installation/startup diagnostics passed on one C5; UART/FC/load/reset-fault/power gates not performed",
+  "browser": {
+    "browser_errors": [],
+    "routes_verified": [
+      [
+        "/api/devices/102030405060/provision",
+        {
+          "board": "xiao_esp32c5",
+          "fingerprint": "81c1b30044fdf18f3f6dc35a3d575825a811076a02a97512014f1334c38cc7c2",
+          "role": "guard"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-check",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "79a3ff591abe1d44699625b805aa94a54fc01bab67d09bec1f22a0ccac29c57e"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-uart-test",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "79a3ff591abe1d44699625b805aa94a54fc01bab67d09bec1f22a0ccac29c57e",
+          "sensor_adapter": "a",
+          "fc_adapter": "b",
+          "fixture_confirmed": true
+        }
+      ],
+      [
+        "/api/devices/102030405062/provision",
+        {
+          "role": "scout",
+          "board": "xiao_esp32c5",
+          "fingerprint": "scout-build"
+        }
+      ]
+    ],
+    "responsive_width": 390
+  },
+  "native_fc_simulation": {
+    "result": "passed",
+    "firmware": "ArduCopter 4.6.3",
+    "route": "standalone UART4 filter",
+    "evidence": "p0-sitl/result.json",
+    "hardware_qualification": false,
+    "simulator_exit_code": 0
+  },
+  "next_step": "When the FC/harness is ready, resume PV-01 through PV-08 in threatmodel/p0-verification-plan.md; retain partial closure until all applicable installation gates pass.",
+  "p0_milestone_status": "partially_closed_pending_full_validation",
+  "partial_closure_decision": {
+    "date": "2026-10-24",
+    "basis": "User directed partial closure pending full validation and a written plan for later resumption.",
+    "closed_scope": [
+      "Independent guard and standalone FC-filter implementation",
+      "Recorded host, browser and scoped native ArduPilot simulator checks",
+      "Guard 0.2.1 installation and USB startup verification on 38:44:BE:BE:0C:20"
+    ],
+    "deferred_scope": [
+      "Exact installed FC configuration and UART/harness validation",
+      "Physical authority isolation including RC/failsafe behavior",
+      "Sustained processing/control-link timing and recovery",
+      "Reset, disconnect and startup/failure behavior",
+      "Actual signed/configured downlink delivery",
+      "Electrical containment (TM-11)"
+    ],
+    "threat_status": {
+      "TM-04": "partially_closed_implementation_complete_validation_pending",
+      "TM-11": "open_electrical_validation_pending"
+    },
+    "deployment_qualified": false,
+    "verification_plan": "../p0-verification-plan.md"
+  }
+}

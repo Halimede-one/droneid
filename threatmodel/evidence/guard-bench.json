@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-24",
+  "scope": "Multi-model separate UART guard and local web bench; FC filter remains an OR alternative.",
+  "builds": [
+    {
+      "board_id": "xiao_esp32c5",
+      "version": "0.2.0",
+      "chip": "esp32c5",
+      "flash_size": "8MB",
+      "fingerprint": "9a114af3c8b0425ded4fdf912414fb23a5d886169bcb32a51dd0e3cc222a6ee6",
+      "app_sha256": "72630f53814a194e89f47edb3d40911b6759ea21803badbefd7e72de95d46fb0",
+      "size": 234400,
+      "radio_network_components": [],
+      "compiler_stack_protection": "all",
+      "scope": "Local build metadata/configuration only; not signature or device attestation."
+    },
+    {
+      "board_id": "xiao_esp32c6",
+      "version": "0.2.0",
+      "chip": "esp32c6",
+      "flash_size": "4MB",
+      "fingerprint": "36cb67732bf47648626401b74fa03e761f7b67903e6d1f4947030ba0b2109161",
+      "app_sha256": "520298b6feb531eed4c642be210caf3b792b5ab5943235109847ceaffc07bd00",
+      "size": 224496,
+      "radio_network_components": [],
+      "compiler_stack_protection": "all",
+      "scope": "Local build metadata/configuration only; not signature or device attestation."
+    },
+    {
+      "board_id": "xiao_esp32s3",
+      "version": "0.2.0",
+      "chip": "esp32s3",
+      "flash_size": "8MB",
+      "fingerprint": "9cb4ea0bd77555324bee060e3e24efc5a1ba836d57f8e1c0e3d896003a8906b9",
+      "app_sha256": "9ee600e73e68979c875cbd12ee0bcce202a3110a9729d3693be78e6a48fed12a",
+      "size": 235456,
+      "radio_network_components": [],
+      "compiler_stack_protection": "all",
+      "scope": "Local build metadata/configuration only; not signature or device attestation."
+    }
+  ],
+  "host_validation": {
+    "sanitizer_suites": 6,
+    "python_tests": 38,
+    "new_guard_python_tests": 7,
+    "result": "passed",
+    "final_affected_python_suites": "Guard bench and dashboard suites passed again after final build-image validation changes."
+  },
+  "browser": {
+    "browser_errors": [],
+    "routes_verified": [
+      [
+        "/api/devices/102030405061/guard-check",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "36cb67732bf47648626401b74fa03e761f7b67903e6d1f4947030ba0b2109161"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-uart-test",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "36cb67732bf47648626401b74fa03e761f7b67903e6d1f4947030ba0b2109161",
+          "sensor_adapter": "a",
+          "fc_adapter": "b",
+          "fixture_confirmed": true
+        }
+      ],
+      [
+        "/api/devices/102030405060/guard-flash",
+        {
+          "board": "xiao_esp32s3",
+          "fingerprint": "9cb4ea0bd77555324bee060e3e24efc5a1ba836d57f8e1c0e3d896003a8906b9"
+        }
+      ]
+    ],
+    "responsive_width": 390
+  },
+  "usb_overflow_regression": {
+    "exponent_overflow_rejected": true,
+    "reader_recovers": true,
+    "snapshot_serializable": true
+  },
+  "running_server": {
+    "address": "http://127.0.0.1:8766",
+    "guard_profiles_available": [
+      "xiao_esp32c5",
+      "xiao_esp32c6",
+      "xiao_esp32s3"
+    ],
+    "monitored_radio_devices": 3,
+    "fixture_test_dependencies_installed": true,
+    "fixture_adapters_connected": 0
+  },
+  "hardware": {
+    "boards_flashed": false,
+    "guard_uart_fixture_run": false,
+    "fc_integration_run": false,
+    "reset_load_electrical_acceptance": "pending"
+  },
+  "limitations": [
+    "Browser tests use simulated devices; wired fixture code uses simulated serial ports in automated tests.",
+    "USB build/hash and self-test diagnostics are not cryptographic firmware attestation.",
+    "Guard startup self-test is a smoke test, not the full adversarial acceptance suite."
+  ]
+}

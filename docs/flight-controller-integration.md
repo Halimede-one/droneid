@@ -8,6 +8,22 @@ installed firmware version, available ports, electrical connection, and
 end-to-end forwarding still need bench verification. USB JSONL remains available
 alongside UART.
 
+P0 now has an [independent guard implementation](../guard/README.md): a second,
+radio-free XIAO sits between the sensor and FC and regenerates only permitted
+messages under fixed budgets. Its firmware builds and offline checks pass;
+physical acceptance remains open. The radio sensor uses the original UART
+contract, while the FC/downlink carries the new DRG2 TUNNEL wrapper. This does
+not add an iNav forwarding path or resolve shared-power fault containment.
+
+An alternative is the standalone [FC-side UART4 filter](../fc_filter/README.md):
+one radio XIAO connects directly to custom FC firmware, with no second board.
+It accepts the radio's original DRID format and normalizes reports to DRG2.
+The external XIAO guard works with stock FC firmware; combining the two is optional.
+Pinned custom ArduPilot/iNav builds quarantine input
+before native parsing and reject control traffic on the physical port. ArduPilot
+routes admitted reports after normal signature checks; iNav consumes them.
+The stock configuration examples below do not install these patches.
+
 The intended vehicle path reports nearby aircraft to the operator through the
 existing MAVLink telemetry stream. The base station runs custom parsing software.
 iNav is the preferred flight-controller firmware; ArduPilot and Betaflight

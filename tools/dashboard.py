@@ -17,10 +17,13 @@ import threading
 import time
 
 import bench
+import guard_bench
+import guard_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_LOGS = 500
 MAX_CONTACTS = 128
+FIXTURE_LOCK = threading.Lock()
 
 
 def now_utc():
@@ -172,6 +175,7 @@ class Device:
         self.error = None
         self.status = None
         self.status_at = None
+        self.guard_seen = False
         self.identify_request = None
         self.identify_hold_until = 0
         self.session = None
@@ -198,6 +202,12 @@ class Device:
         record = dict(record, host_received_utc=now_utc())
         if record.get('kind') == 'status' and re.fullmatch('[0-9a-f]{12}', self.info['id']):
             if record.get('receiver_id') != self.info['id']:
+                # A broken/older guard identity must not make an ordinary
+                # Scout flash available after restarting the bench. Retain
+                # the protective role, but never accept this status as ready.
+                if record.get('device_type') == 'uart_guard' or record.get('firmware_project') == 'droneid_guard':
+                    with self.lock:
+                        self.guard_seen = True
                 raise OSError('USB identity does not match the responding firmware. Monitoring stopped.')
         with self.lock:
             session = record.get('session')
@@ -206,6 +216,8 @@ class Device:
                 self.status = None
                 self.session = session
             if record['kind'] == 'status':
+                if record.get('device_type') == 'uart_guard' or record.get('firmware_project') == 'droneid_guard':
+                    self.guard_seen = True
                 self.status = record
                 self.status_at = timestamp
                 self.error = None
@@ -299,6 +311,7 @@ class Device:
         with self.lock:
             now = time.time()
             return dict(self.info, present=self.present, monitoring=self.monitoring,
+                        device_type='uart_guard' if self.guard_seen else 'radio',
                         connection=self.connection, error=self.error, status=self.status,
                         status_age_s=None if self.status_at is None else now-self.status_at,
                         contacts=self.contacts.snapshot(now), log_cursor=self.log_cursor,
@@ -310,7 +323,7 @@ class Device:
             with self.lock:
                 self.job['lines'].append(text)
 
-    def begin(self, kind, work):
+    def begin(self, kind, work, guard=False):
         if not self.operation_lock.acquire(blocking=False):
             raise RuntimeError('This board already has an operation in progress.')
         with self.lock:
@@ -340,8 +353,8 @@ class Device:
                 while time.monotonic() < deadline:
                     with self.lock:
                         status = self.status
-                    if status and status.get('radio_ready') and verify(status):
-                        self.job_line('Verified settings and running firmware over USB.')
+                    if status and (status.get('ready') if guard else status.get('radio_ready')) and verify(status):
+                        self.job_line('Verified guard build identity and startup policy test over USB. Hardware acceptance remains separate.' if guard else 'Verified settings and running firmware over USB.')
                         with self.lock:
                             self.job['state'] = 'complete'
                         break
@@ -384,6 +397,8 @@ class Device:
     def configure(self, values):
         command = bench.configuration_command(values.get('role'), values.get('transport'), values.get('broadcast_id'), values.get('hello'))
         with self.lock:
+            if self.guard_seen:
+                raise ValueError('Guard policy is compiled locally; radio settings do not apply.')
             if not self.status or self.status.get('configuration_version') != 1:
                 raise ValueError('Flash firmware 0.4.0 or newer before setting an ID and hello message.')
 
@@ -397,12 +412,36 @@ class Device:
                 s.get('hello_hex') == values['hello'].encode().hex())
         return self.begin('configure', work)
 
-    def flash(self, firmware, expected_fingerprint):
+    def provision(self, firmware, values):
+        """Explicit application-role installation from Device settings.
+
+        Merely choosing a role never mutates a board. The ordinary radio flash
+        endpoint still cannot replace a guard; only this intentional path can.
+        """
+        role, board = values.get('role'), values.get('board')
+        if role == 'guard':
+            return self.flash_guard(board, values.get('fingerprint'))
+        if role != 'scout':
+            raise ValueError('Choose the Scout or Guard device role.')
+        if board != 'xiao_esp32c5':
+            raise ValueError('Scout firmware currently supports only XIAO ESP32-C5.')
+        with self.lock:
+            known_board = (self.status or {}).get('board_id')
+            if known_board and known_board != board:
+                raise ValueError('This device model cannot run the ESP32-C5 Scout firmware.')
+        return self.flash(firmware, values.get('fingerprint'), replace_guard=True)
+
+    def flash(self, firmware, expected_fingerprint, *, replace_guard=False):
+        with self.lock:
+            if self.guard_seen and not replace_guard:
+                raise ValueError('This board is a UART guard. To replace its protection, explicitly choose Scout in Device settings and install Scout firmware.')
         bundle = firmware.bundle()
         if expected_fingerprint != bundle['fingerprint']:
             raise ValueError('Firmware build changed. Refresh the page before flashing.')
 
         def work():
+            if replace_guard and self.guard_seen:
+                self.job_line('Replacing Guard with Scout firmware. This board will no longer provide a UART security boundary.')
             port = self.fresh_port()
             with tempfile.TemporaryDirectory(prefix='droneid-flash-') as tmp:
                 command = [sys.executable, '-m', 'esptool', '--chip', 'esp32c5', '--port', port,
@@ -427,12 +466,114 @@ class Device:
                     timer.cancel()
                     process.stdout.close()
             self.job_line('Flash verified by esptool. Waiting for firmware…')
-            return lambda s: s.get('firmware') == bundle['version']
+            def verify(status):
+                match = (status.get('firmware') == bundle['version'] and
+                         status.get('radio_ready') is True and status.get('configuration_version') == 1 and
+                         status.get('device_type') != 'uart_guard' and status.get('firmware_project') != 'droneid_guard')
+                if match and replace_guard:
+                    # A requested conversion is not a role change until the
+                    # fresh post-flash scout status has been verified.
+                    with self.lock:
+                        self.guard_seen = False
+                        self.contacts = Contacts()
+                return match
+            return verify
         return self.begin('flash', work)
+
+    def flash_guard(self, board, expected_fingerprint):
+        bundle = guard_bench.GuardFirmware(board).bundle()
+        if expected_fingerprint != bundle['fingerprint']:
+            raise ValueError('Guard build changed. Refresh before flashing.')
+        def work():
+            with tempfile.TemporaryDirectory(prefix='droneid-guard-') as tmp:
+                command = [sys.executable, '-m', 'esptool', '--chip', bundle['chip'], '--port', self.fresh_port(),
+                           '--baud', '460800', '--before', 'default-reset', '--after', 'hard-reset',
+                           'write-flash', '--flash-mode', 'dio', '--flash-size', bundle['flash_size'], '--flash-freq', '80m']
+                for offset, name, data in bundle['images']:
+                    path = Path(tmp)/(offset+'-'+name)
+                    path.write_bytes(data)
+                    command.extend([offset,str(path)])
+                self.job_line(f'Installing {board} guard {bundle["version"]} on USB {self.info["serial"]}.')
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True, bufsize=1, env=dict(os.environ, PYTHONUNBUFFERED='1', NO_COLOR='1', TERM='dumb'))
+                timer = threading.Timer(120, process.kill)
+                timer.daemon = True
+                timer.start()
+                try:
+                    for line in process.stdout:
+                        self.job_line(line)
+                    if process.wait() != 0:
+                        raise RuntimeError('Guard flash failed. Check selected model; hold BOOT, tap RESET, release BOOT to retry.')
+                finally:
+                    timer.cancel()
+                    process.stdout.close()
+            with self.lock:
+                self.guard_seen = True
+            self.job_line('Flash verified. Waiting for matching board, build hash and startup self-test.')
+            return lambda s: guard_bench.check_status(s,bundle)
+        return self.begin('guard-flash',work,guard=True)
+
+    def check_guard(self, board):
+        bundle = guard_bench.GuardFirmware(board).bundle()
+        with self.lock:
+            if not self.guard_seen:
+                raise ValueError('Install guard firmware before running its USB check.')
+        previous = None
+        def verify(status):
+            nonlocal previous
+            guard_bench.check_status(status,bundle)
+            if previous is None:
+                previous = dict(status)
+                self.job_line('First fresh sample matches the local build; waiting for uptime to advance.')
+                return False
+            if status['session'] != previous['session']:
+                raise ValueError('Guard restarted during USB check.')
+            return status['uptime_ms'] > previous['uptime_ms']
+        def work():
+            self.job_line('Read-only USB check. Requires two fresh status samples and a passing boot policy test.')
+            self.job_line('No UART data will be injected. This does not test wiring, reset behavior or FC routing.')
+            return verify
+        return self.begin('guard-check',work,guard=True)
+
+    def test_guard_uart(self, values):
+        if values.get('fixture_confirmed') is not True:
+            raise ValueError('Confirm this guard is wired only to the two fixture adapters, with the FC disconnected.')
+        bundle = guard_bench.GuardFirmware(values.get('board')).bundle()
+        with self.lock:
+            baseline = self.status
+            if not baseline or self.status_at is None or time.time()-self.status_at > 5:
+                raise ValueError('Start monitoring and wait for fresh guard status before testing UART.')
+            guard_bench.check_status(baseline,bundle)
+        def verify(status):
+            guard_bench.check_status(status,bundle)
+            if status['session'] != baseline['session']:
+                raise ValueError('Guard restarted during the wired test.')
+            for side in ('sensor','fc'):
+                if status[side]['rejected'] <= baseline[side]['rejected']:
+                    raise ValueError('Guard did not count rejected fixture traffic on '+side+'.')
+                if status[side]['uart_errors'] != baseline[side]['uart_errors']:
+                    raise ValueError('UART errors occurred during the fixture test on '+side+'.')
+            if status['sensor']['framing_errors'] <= baseline['sensor']['framing_errors']:
+                raise ValueError('Bad-CRC rejection was not observed.')
+            return True
+        def work():
+            if not FIXTURE_LOCK.acquire(blocking=False):
+                raise RuntimeError('Another guard is using the wired fixture. Wait for its test to finish.')
+            try:
+                guard_fixture.run(values.get('sensor_adapter'),values.get('fc_adapter'),self.job_line,
+                    system=baseline['system_id'], sensor_component=baseline['sensor_component'],
+                    fc_component=baseline['fc_component'], guard_component=baseline['component_id'],
+                    target_system=baseline['target_system'], target_component=baseline['target_component'])
+            finally:
+                FIXTURE_LOCK.release()
+            return verify
+        return self.begin('guard-uart-test',work,guard=True)
 
     def configure_uart(self, values):
         command=bench.uart_command(values)
         with self.lock:
+            if self.guard_seen:
+                raise ValueError('Guard UART policy is fixed in its local build.')
             if not self.status or (self.status.get('uart') or {}).get('configuration_version')!=1:
                 raise ValueError('Flash firmware 0.5.0 or newer before configuring UART.')
         def work():

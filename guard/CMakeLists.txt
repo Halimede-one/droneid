@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+set(SUPPORTED_TARGETS esp32c5 esp32c6 esp32s3)
+set(PROJECT_VER "0.2.1")
+set(EXTRA_COMPONENT_DIRS "../components/uart_guard" "../components/mavlink")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+idf_build_set_property(MINIMAL_BUILD ON)
+project(droneid_guard)

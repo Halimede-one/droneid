@@ -3,6 +3,17 @@
 Review date: **2026-10-24**. This is a source-based threat assessment with targeted
 offline probes, not a penetration test of the installed aircraft.
 
+For the subsequent independent-guard implementation, see the
+[P0 build/test evidence](evidence/p0-implementation.json) and
+[guard acceptance guide](../guard/README.md#validation-and-remaining-acceptance).
+The standalone FC alternative has its own [build/test evidence](evidence/p0-fc-standalone.json)
+and [integration/acceptance guide](../fc_filter/README.md#verification-and-acceptance).
+The earlier [FC prototype snapshot](evidence/p0-fc-filter.json) records the
+superseded guard-only input profile. The current standalone implementation also
+accepts direct radio DRID, so the two P0 implementations are alternatives.
+The baseline results below remain historical evidence; no physical P0 tests
+have been completed.
+
 ## Reviewed baseline
 
 Base commit: `48e9e01ea84999f7e8bc474ab4a766649235ac1c` (`init`). The working
@@ -80,7 +91,7 @@ Temporary host logs are removed. Output is JSONL; the review output is saved in
 | Complete benign MAVLink heartbeat inside the 25 raw observation bytes | Exactly one outer TUNNEL frame, configured envelope IDs, raw bytes unchanged | Supports the normal serializer's data/command separation. Does not prove behavior after ESP32 compromise, serial corruption or arbitrary parser defects. |
 | Same unsigned FC heartbeat replayed after expiry | Accepted without a key; replay refreshes heartbeat age | Confirms no authentication/replay gate for that telemetry path. No real controller involved. |
 | One original contact followed by 128 distinct source MACs | Store remains at 128; original contact is evicted | Confirms bounded memory but vulnerable contact retention. The records are constructed offline; RF loss rates are not measured. |
-| USB status containing numeric overflow `1e309` | Decoder accepts; `ValueError` escapes the real reader with mocked serial; snapshot fails JSON serialization | Confirms TM-07 host availability defect. It requires hostile USB output; an ordinary RF route to this status field was not found. |
+| USB status containing numeric overflow `1e309` | Originally accepted and broke the reader; guard-bench update rejects it, then accepts a subsequent valid status with a serializable snapshot | Regression uses the real reader with mocked serial. Broader schema hardening remains open; historical baseline evidence is preserved. |
 
 **These are baseline evidence probes, not security acceptance tests.** Several
 assert a known weakness. Exit code zero means the documented observations were
@@ -105,6 +116,14 @@ dated results as historical evidence.
 
 ## Remaining validation
 
+The deployment-specific [P0 closure checklist](p0-acceptance.md) is the current
+acceptance record. P0 is **partially closed, pending full validation**, at the
+user's direction. The [P0 verification plan](p0-verification-plan.md) preserves
+the deferred procedures and evidence requirements for a later session.
+The designated C5 guard has passed USB installation/startup
+verification, but every FC/harness integration gate remains open; iNav observation
+forwarding is also an unimplemented functional path.
+
 | Work | Method | Evidence needed |
 | --- | --- | --- |
 | Radio-stack robustness and starvation | Controlled RF test environment, no operational aircraft; malformed and valid-load traffic on each supported receive format | Peak CPU/heap, reset cause, loss/latency, queue/drop behavior, scan progress and recovery after traffic stops |
@@ -117,15 +136,18 @@ dated results as historical evidence.
 | Dependency exposure | Pin SDK commit and radio-library versions; review relevant upstream advisories | Per-advisory applicability and remediation decision, not a generic ESP32 vulnerability list |
 
 No hardware RF attack, live serial injection, port scan, eFuse operation, FC
-configuration change or flash was part of this review. No radio remote-code-
+configuration change or flash was part of the original baseline review. Later
+closure work and its narrower scope are recorded below. No radio remote-code-
 execution vulnerability or successful FC takeover was demonstrated. The absence
 of such a demonstration does not establish that those paths are impossible.
 
 ## Decisions needed for the next implementation milestone
 
 1. Exact FC firmware/target/version and installed port/downlink configuration.
-2. Whether to use physical one-way telemetry, an independent guard, or an FC-side
-   policy; how reports reach the operator if ESP TX is disconnected.
+2. **Supported alternatives: second-XIAO guard OR standalone FC UART4 filter.**
+   Choose the harness and firmware for the deployed option. Verify the FC route
+   and power arrangement. Test direct adversarial input to the selected boundary;
+   if combining both, exercise each independently too.
 3. Whether the downlink already enforces signing/authentication, and which
    participants currently possess command-authorizing keys.
 4. Whether captured modules, untrusted maintenance users and remote bench access
@@ -146,3 +168,64 @@ index is live and must be rechecked for a release.
 - [MAVLink message signing](https://mavlink.io/en/guide/message_signing.html): authentication/replay mechanism; [TUNNEL protocol](https://mavlink.io/en/services/tunnel.html): opaque payload transport.
 - [ESP32-C5 security overview](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c5/security/security.html): platform security mechanisms; [ESP-IDF advisories](https://github.com/espressif/esp-idf/security/advisories): dependency triage source.
 - [RFC 9434, DRIP architecture](https://www.rfc-editor.org/rfc/rfc9434.html): Remote ID trust and authentication context.
+
+## Multi-model guard provisioning
+
+The initial guard 0.2.0 builds for XIAO C5, C6 and S3 exclude radio/network components and
+include a fail-closed startup policy smoke test. Web provisioning checks selected
+profile, local build shape, immutable image fingerprint and fresh post-flash
+model/version/hash/self-test status. These checks are not device attestation.
+The optional two-adapter UART fixture tests benign report/heartbeat forwarding,
+forbidden parameter requests and bad CRC, then checks diagnostic counter deltas.
+
+See [guard-bench evidence](evidence/guard-bench.json) and the
+[fixture guide](../guard/README.md#web-bench-flash-and-test-guards). Browser tests
+use simulated devices; UART fixture code is tested with simulated serial ports.
+That validation used no device flashing, physical UART, FC, reset, power or RF test.
+
+## P0 closure follow-up
+
+The [closure progress record](evidence/p0-closure-progress.json) supersedes guard
+0.2.0 as the current candidate. A read-only USB diagnostic from a connected C5
+showed an incorrect factory identity. Source inspection confirmed that the SDK's
+generic helper writes eight bytes on IEEE 802.15.4 targets into the guard's
+six-byte buffer. Guard 0.2.1 uses the explicit six-byte factory-MAC API. C5/C6/S3
+build verification passes; the bench rejects old local builds and keeps guard
+protection when identity validation fails. This is a startup defect, not a
+demonstrated network exploit.
+
+After the fix, **42 Python tests and six C/C++ sanitizer executables pass**;
+desktop/mobile browser checks with simulated devices also pass. See the
+[host log](evidence/p0-closure-host-tests.txt).
+
+After the user confirmed the dedicated guard and that the FC/harness is not
+ready, the web bench installed 0.2.1 on C5 `38:44:BE:BE:0C:20`. Esptool verified
+the written images. The USB check captured two samples in one boot session,
+uptime increasing from 5 to 2011 ms, with matching factory identity and local
+build hash, `ready=true`, `policy_selftest=true` and `radios_enabled=false`.
+Both Scouts retained their sessions and advancing uptime. The
+[installation log and samples](evidence/p0-guard-usb-install.json) record this
+limited check. It is not device attestation, RF measurement or physical UART,
+FC, reset-fault or power-fault acceptance.
+
+The [native FC simulator result](evidence/p0-sitl/result.json) passes for the
+standalone ArduPilot route, including matching ID/hello/RSSI delivery, trusted
+operator positive controls, denied-class injection with three source-ID pairs,
+nested/malformed frames, short line-rate-paced floods and recovery. Checked
+state is mode, armed flag, stored mission and the `WPNAV_SPEED` sentinel. RC and
+failsafe effects and all-parameter invariance were not asserted. Compressed
+both-direction captures, simulator/build logs and hashes accompany the result.
+
+Native FC simulation is reproducible with
+[`fc_filter/test_sitl.py`](../fc_filter/test_sitl.py); see its
+[run instructions](../fc_filter/README.md#native-ardupilot-simulator-check).
+It creates its own disarmed FC process and loopback UART sockets and retains a
+failed result on test failure. Hardware acceptance remains governed by the
+[P0 checklist](p0-acceptance.md).
+
+During harness development, this pinned SITL release's advertised `--serial9`
+option overwrote storage beyond its nine-entry serial-path array, causing
+startup/shutdown failures. The runner now specifies only paths 0–8 and requires
+a clean exit; the recorded passing run exited with code 0. It also waits for
+`ArduPilot Ready` before mission setup. Earlier setup failures are not acceptance
+passes and did not involve physical hardware or changes to the FC policy.

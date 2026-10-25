@@ -1,0 +1,74 @@
+ArduCopter 4.6.3 MicoAir743v2 final incremental build (after full target build)
+Waf: Entering directory `/tmp/droneid-ardupilot-4.6.3/build/MicoAir743v2'
+Checking for env.py
+env added ENABLE_DFU_BOOT=0
+env added WITH_FATFS=1
+env added PROCESS_STACK=0x1C00
+env added MAIN_STACK=0x600
+env added IOMCU_FW=0
+env added PERIPH_FW=0
+env added BOARD_FLASH_SIZE=2048
+env added EXT_FLASH_SIZE_MB=0
+env added INT_FLASH_PRIMARY=False
+env added ENABLE_CRASHDUMP=True
+env appended CPU_FLAGS=['-mcpu=cortex-m7', '-mfpu=fpv5-d16', '-mfloat-abi=hard', '-DARM_MATH_CM7', '-u_printf_float']
+env added CORTEX=cortex-m7
+env added APJ_BOARD_ID=1179
+env added APJ_BOARD_TYPE=STM32H743xx
+env added USBID=0x1209/0x5741
+env added FLASH_RESERVE_START_KB=128
+env added EXT_FLASH_RESERVE_START_KB=0
+env added FLASH_TOTAL=1703936
+env added HAS_EXTERNAL_FLASH_SECTIONS=0
+env added CHIBIOS_BUILD_FLAGS=USE_FATFS=yes CHIBIOS_STARTUP_MK=os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32h7xx.mk CHIBIOS_PLATFORM_MK=os/hal/ports/STM32/STM32H7xx/platform.mk MCU=cortex-m7 ENV_UDEFS=-DCHPRINTF_USE_FLOAT=1
+Padded 4 bytes for bootloader.bin to 19808
+Embedding file bootloader.bin:/tmp/droneid-ardupilot-4.6.3/Tools/bootloaders/MicoAir743v2_bl.bin
+Embedding file font0.bin:libraries/AP_OSD/fonts/font0.bin
+Embedding file font1.bin:libraries/AP_OSD/fonts/font1.bin
+Embedding file font2.bin:libraries/AP_OSD/fonts/font2.bin
+Embedding file font3.bin:libraries/AP_OSD/fonts/font3.bin
+Embedding file font4.bin:libraries/AP_OSD/fonts/font4.bin
+Embedding file hwdef.dat:/tmp/droneid-ardupilot-4.6.3/build/MicoAir743v2/hw.dat
+Generating compile_commands.json
+Build commands will be stored in build/MicoAir743v2/compile_commands.json
+Generating compile_commands.json
+Build commands will be stored in build/MicoAir743v2/compile_commands.json
+[ 878/1013] Compiling libraries/GCS_MAVLink/GCS_Common.cpp
+[1006/1013] Linking build/MicoAir743v2/lib/libArduCopter_libs.a
+[1007/1013] Linking build/MicoAir743v2/bin/arducopter
+/tmp/droneid-inav-9.0.0/tools/arm-gnu-toolchain-13.2.rel1/bin/../lib/gcc/arm-none-eabi/13.2.1/../../../../arm-none-eabi/bin/ld: warning: bin/arducopter has a LOAD segment with RWX permissions
+
+[1008/1013] Generating bin/arducopter.bin
+[1009/1013] checking symbols build/MicoAir743v2/bin/arducopter
+[1010/1013] app_descriptor set_app_descriptor: build/MicoAir743v2/bin/arducopter build/MicoAir743v2/bin/arducopter.bin
+No APP_DESCRIPTOR found
+[1011/1013] apj_gen build/MicoAir743v2/bin/arducopter.bin
+[1012/1013] bin cleanup build/MicoAir743v2/bin/arducopter.bin
+[1013/1013] Generating bin/arducopter_with_bl.hex
+Waf: Leaving directory `/tmp/droneid-ardupilot-4.6.3/build/MicoAir743v2'
+
+BUILD SUMMARY
+Build directory: /tmp/droneid-ardupilot-4.6.3/build/MicoAir743v2
+Target          Text (B)  Data (B)  BSS (B)  Total Flash Used (B)  Free Flash (B)  External Flash Used (B)
+----------------------------------------------------------------------------------------------------------
+bin/arducopter   1465345      3872   258380               1469217          234708  Not Applicable         
+
+'copter' finished successfully (9.599s)
+
+iNav 9.0.0 MICOAIR743V2_EXTMAG full target build (summary)
+Building C object src/main/target/MICOAIR743V2/CMakeFiles/MICOAIR743V2_EXTMAG.elf.dir/__/__/telemetry/smartport.c.obj
+Building C object src/main/target/MICOAIR743V2/CMakeFiles/MICOAIR743V2_EXTMAG.elf.dir/__/__/telemetry/sim.c.obj
+Building C object src/main/target/MICOAIR743V2/CMakeFiles/MICOAIR743V2_EXTMAG.elf.dir/__/__/telemetry/telemetry.c.obj
+Linking C executable ../../../../bin/MICOAIR743V2_EXTMAG.elf
+Memory region         Used Size  Region Size  %age Used
+           FLASH:        1080 B       128 KB      0.82%
+    FLASH_CONFIG:          0 GB       128 KB      0.00%
+          FLASH1:      665263 B      1792 KB     36.25%
+        ITCM_RAM:       14184 B        64 KB     21.64%
+        DTCM_RAM:       12812 B       128 KB      9.77%
+             RAM:      111424 B       512 KB     21.25%
+          D2_RAM:       14496 B       256 KB      5.53%
+       MEMORY_B1:          0 GB         0 GB
+Built target MICOAIR743V2_EXTMAG.elf
+Built target MICOAIR743V2_EXTMAG
+

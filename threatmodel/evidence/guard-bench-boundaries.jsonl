@@ -1,0 +1,4 @@
+{"check":"nested_mavlink_remains_opaque","result":"observed","outer_frames":1,"outer_message_id":385,"raw_bytes_preserved":true}
+{"check":"unsigned_heartbeat_replay","result":"observed","accepted_without_key":true,"identical_replay_refreshes_age":true}
+{"check": "rotating_sources_evict_contact", "result": "observed", "bounded_contacts": 128, "original_source_evicted": true}
+{"check": "nonfinite_usb_status", "result": "observed", "decoder_accepted": false, "reader_recovered": true, "snapshot_not_json_serializable": false}

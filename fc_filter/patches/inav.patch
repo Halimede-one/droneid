@@ -1,0 +1,80 @@
+--- a/src/main/io/serial.c
++++ b/src/main/io/serial.c
+@@ -51,6 +51,7 @@
+ #endif
+ 
+ #include "io/serial.h"
++#include "io/droneid_fc_filter.h"
+ 
+ #include "fc/cli.h"
+ #include "fc/settings.h"
+@@ -354,6 +355,14 @@
+     UNUSED(options);
+ #endif
+ 
++    // Dedicated physical UART4. Reconfiguration fails closed instead of
++    // opening an MSP, RC, GPS or callback-based consumer on the guard wire.
++    if (identifier == SERIAL_PORT_USART4) {
++        if (function != FUNCTION_TELEMETRY_MAVLINK || rxCallback != NULL) return NULL;
++        baudRate = 115200;
++        mode = MODE_RXTX;
++        options = SERIAL_NOT_INVERTED;
++    }
+     serialPortUsage_t *serialPortUsage = findSerialPortUsageByIdentifier(identifier);
+     if (!serialPortUsage || serialPortUsage->function != FUNCTION_NONE) {
+         // not available / already in use
+@@ -524,6 +533,8 @@
+ void serialPassthrough(serialPort_t *left, serialPort_t *right, serialConsumer
+                        *leftC, serialConsumer *rightC)
+ {
++    // Never turn the protected port into a transparent bridge.
++    if (left->identifier == SERIAL_PORT_USART4 || right->identifier == SERIAL_PORT_USART4) return;
+     waitForSerialPortToFinishTransmitting(left);
+     waitForSerialPortToFinishTransmitting(right);
+ 
+--- a/src/main/telemetry/mavlink.c
++++ b/src/main/telemetry/mavlink.c
+@@ -62,6 +62,7 @@
+ #include "io/gps.h"
+ #include "io/ledstrip.h"
+ #include "io/serial.h"
++#include "io/droneid_fc_filter.h"
+ #include "io/osd.h"
+ 
+ #include "navigation/navigation.h"
+@@ -352,7 +353,8 @@
+     uint8_t mavBuffer[MAVLINK_MAX_PACKET_LEN];
+ 
+     mavlink_status_t* chan_state = mavlink_get_channel_status(MAVLINK_COMM_0);
+-    if (telemetryConfig()->mavlink.version == 1) {
++    if (telemetryConfig()->mavlink.version == 1 &&
++        (!mavlinkPort || mavlinkPort->identifier != SERIAL_PORT_USART4)) {
+         chan_state->flags |= MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
+     } else {
+         chan_state->flags &= ~MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
+@@ -512,7 +514,8 @@
+ void mavlinkSendRCChannelsAndRSSI(void)
+ {
+ #define GET_CHANNEL_VALUE(x) ((rxRuntimeConfig.channelCount >= (x + 1)) ? rxGetChannelValue(x) : 0)
+-    if (telemetryConfig()->mavlink.version == 1) {
++    if (telemetryConfig()->mavlink.version == 1 &&
++        (!mavlinkPort || mavlinkPort->identifier != SERIAL_PORT_USART4)) {
+         mavlink_msg_rc_channels_raw_pack(mavSystemId, mavComponentId, &mavSendMsg,
+             // time_boot_ms Timestamp (milliseconds since system boot)
+             millis(),
+@@ -1330,9 +1333,15 @@
+ }
+ #endif
+ 
++#include "droneid_receive.inc"
++
+ // Returns whether a message was processed
+ static bool processMAVLinkIncomingTelemetry(void)
+ {
++    if (mavlinkPort->identifier == SERIAL_PORT_USART4) {
++        receiveDroneId();
++        return false;
++    }
+     while (serialRxBytesWaiting(mavlinkPort) > 0) {
+         // Limit handling to one message per cycle
+         char c = serialRead(mavlinkPort);

@@ -1,0 +1,40 @@
+BLE/Wi-Fi framing, JSON bounds, upstream fixtures and malformed-input trials passed.
+UART configuration, MAVLink reference frames, CRC recovery, age checks and parser fuzz passed.
+Independent UART guard: allowlist, schema, restart-safe output, bidirectional filtering, budgets and malformed-stream trials passed.
+FC ingress: canonical guard frames, common-dialect deny policy, schema, corruption, resync, flood, budgets and clock-wrap tests passed
+FC adapters: physical-port isolation, report routing only, native signing retained, no local command dispatch, bounded reads passed
+test_boot_noise_and_partial_reconnect (test_bench.StreamTests.test_boot_noise_and_partial_reconnect) ... ok
+test_command_recovers_from_role_restart (test_bench.StreamTests.test_command_recovers_from_role_restart) ... ok
+test_fragmented_and_multiple_records (test_bench.StreamTests.test_fragmented_and_multiple_records) ... ok
+test_invalid_schema_json_and_rssi (test_bench.StreamTests.test_invalid_schema_json_and_rssi) ... ok
+test_oversized_line_cannot_be_resumed_as_a_record (test_bench.StreamTests.test_oversized_line_cannot_be_resumed_as_a_record) ... ok
+test_real_c_serializer_fixtures (test_bench.StreamTests.test_real_c_serializer_fixtures) ... ok
+test_backlog_unknown_values_bounded_memory_and_untrusted_text (test_dashboard.AggregationTests.test_backlog_unknown_values_bounded_memory_and_untrusted_text) ... ok
+test_fields_age_independently_and_identity_changes_clear_hello (test_dashboard.AggregationTests.test_fields_age_independently_and_identity_changes_clear_hello) ... ok
+test_messages_in_one_wifi_pack_are_not_dropped_by_host_timing (test_dashboard.AggregationTests.test_messages_in_one_wifi_pack_are_not_dropped_by_host_timing) ... ok
+test_sources_do_not_merge_on_claimed_id_and_wifi_formats_do (test_dashboard.AggregationTests.test_sources_do_not_merge_on_claimed_id_and_wifi_formats_do) ... ok
+test_ascii_limits_and_transport (test_dashboard.ConfigurationTests.test_ascii_limits_and_transport) ... ok
+test_identify_requires_supported_present_board_and_serializes_operations (test_dashboard.DeviceTests.test_identify_requires_supported_present_board_and_serializes_operations) ... ok
+test_identify_uses_existing_reader_and_requires_active_status (test_dashboard.DeviceTests.test_identify_uses_existing_reader_and_requires_active_status) ... ok
+test_new_session_clears_contacts_and_ring_is_bounded (test_dashboard.DeviceTests.test_new_session_clears_contacts_and_ring_is_bounded) ... ok
+test_operation_releases_only_its_port_and_never_overlaps_reader (test_dashboard.DeviceTests.test_operation_releases_only_its_port_and_never_overlaps_reader) ... ok
+test_bundle_restricts_target_paths_and_layout (test_dashboard.FirmwareTests.test_bundle_restricts_target_paths_and_layout) ... ok
+test_static_api_and_mutation_origin_guards (test_dashboard.HTTPTests.test_static_api_and_mutation_origin_guards) ... ok
+test_board_pinout_change_refused (test_fc_filter_install.FilterInstallerTests.test_board_pinout_change_refused) ... ok
+test_changed_source_refused_before_mutation (test_fc_filter_install.FilterInstallerTests.test_changed_source_refused_before_mutation) ... ok
+test_check_is_read_only_then_apply_is_verifiable (test_fc_filter_install.FilterInstallerTests.test_check_is_read_only_then_apply_is_verifiable) ... ok
+test_installed_policy_tampering_and_missing_file_refused (test_fc_filter_install.FilterInstallerTests.test_installed_policy_tampering_and_missing_file_refused) ... ok
+test_no_overwrite_or_symlink_escape (test_fc_filter_install.FilterInstallerTests.test_no_overwrite_or_symlink_escape) ... ok
+test_verify_requires_installed_integration (test_fc_filter_install.FilterInstallerTests.test_verify_requires_installed_integration) ... ok
+test_wrong_revision_refused (test_fc_filter_install.FilterInstallerTests.test_wrong_revision_refused) ... ok
+test_c_frames_decode_with_reference_pymavlink (test_fc_link.UARTTests.test_c_frames_decode_with_reference_pymavlink) ... ok
+test_configuration_rejects_collisions_reserved_pins_and_bad_types (test_fc_link.UARTTests.test_configuration_rejects_collisions_reserved_pins_and_bad_types) ... ok
+test_payload_lengths_versions_and_metadata (test_fc_link.UARTTests.test_payload_lengths_versions_and_metadata) ... ok
+test_c_output_with_reference_mavlink_and_base_station_decoder (test_uart_guard.GuardTests.test_c_output_with_reference_mavlink_and_base_station_decoder) ... ok
+test_guard_board_cannot_be_flashed_with_radio_bundle_after_identification (test_uart_guard.GuardTests.test_guard_board_cannot_be_flashed_with_radio_bundle_after_identification) ... ok
+test_guard_encoding_is_decoded_once_without_implying_authentication (test_uart_guard.GuardTests.test_guard_encoding_is_decoded_once_without_implying_authentication) ... ok
+
+----------------------------------------------------------------------
+Ran 30 tests in 1.196s
+
+OK

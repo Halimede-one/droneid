@@ -1,0 +1,78 @@
+{
+  "review_date": "2026-10-24",
+  "snapshot_utc": "2026-10-24T22:54:29.248375+00:00",
+  "base_commit": "40bb849b83aec4687dbfadc7ade37b91da280aec",
+  "status": "Software implementation built and offline checks passed; P0 deployment acceptance open.",
+  "architecture": "Second XIAO ESP32-C5, dedicated radio-free guard, two separate UARTs; selected by user.",
+  "project": "droneid_guard",
+  "version": "0.1.0",
+  "target": "esp32c5",
+  "esp_idf_commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
+  "guard_binary_bytes": 211856,
+  "radio_network_components": [],
+  "compiler_stack_protection": "all",
+  "pins": {
+    "sensor_side": {
+      "uart": 0,
+      "tx": 8,
+      "rx": 9
+    },
+    "fc_side": {
+      "uart": 1,
+      "tx": 23,
+      "rx": 24
+    },
+    "rom_uart_pins_disconnected": [
+      11,
+      12
+    ]
+  },
+  "validation": {
+    "guard_build": "passed",
+    "radio_build": "passed",
+    "c_sanitizer_suites": 3,
+    "python_tests_passed": 23,
+    "pymavlink_reference_checks": "passed",
+    "guard_build_component_check": "passed",
+    "web_guard_render_checks": "passed in V8 with stub DOM; no browser or hardware claim",
+    "guard_svg": "rendered and visually reviewed"
+  },
+  "tests": {
+    "message_allowlist": "every other pinned common-dialect type rejected in each direction",
+    "input_failures": "CRC, schema, source, flags, MAVLink 1, truncations, UART reset and partial-frame timeout",
+    "embedded_frame": "unguarded interior frame demonstrated; guarded output checked at every restart offset",
+    "sequence_and_payload_variants": 512,
+    "noise_trials_per_direction": 10000,
+    "noise_bytes_offered_per_trial": 512,
+    "noise_bytes_work_limit_per_call": 128,
+    "rate_expiry_recovery": "passed"
+  },
+  "not_performed": [
+    "device flashing",
+    "FC simulator or hardware state/latency tests",
+    "physical harness or boot/download pin capture",
+    "RF hardware stress",
+    "electrical/power fault isolation",
+    "eFuse provisioning or signing-key changes"
+  ],
+  "sha256": {
+    "components/uart_guard/CMakeLists.txt": "09ba39284950b8880890bdad449eb34d70abb00af9d4cfd01e79fe74622ed0d7",
+    "components/uart_guard/uart_guard.c": "b39049213ded09223363686bef782f1a6345d95a9e5a85d9d0dec488a47e6a9b",
+    "components/uart_guard/uart_guard.h": "6363f3ac8669743b3348f01df5cd8fbf3e320d03e9fb01ad0491d22354e31cb5",
+    "guard/verify_build.py": "e62b42e4f32211a4679a85fd2ae379f8fc92f957711f5e61da0d0c029dd69d5d",
+    "guard/CMakeLists.txt": "d501c5e2b84082fb331d01990d0522a44b028379a889d98a49776caa4196538e",
+    "guard/sdkconfig.defaults": "fd073c02ff65a808fa982e065293e04461783bcff436339932c60b835a41dc3c",
+    "guard/partitions.csv": "6311b012c2f52f91a403750d78b5d7cd71495bba075ac9988fc8ed31ef0d7bf9",
+    "guard/main/CMakeLists.txt": "b52f8eb50b45b669f3d9d8eddace2b034781cd697213b9d84ab6a6c35a3984b6",
+    "guard/main/Kconfig.projbuild": "eb9b7bbf1d25a5c76d0f2383a96fcf40caf452b0e3ca4d6662b0f2a209596617",
+    "guard/main/guard_main.c": "196e85e49a1e968822464f013270251ca1ad9e50639bad1127223b53883a9c67",
+    "guard/sdkconfig": "ca43a4a7727390d18047fd5229fc731d7df30a3728229042bed99ce6fea3db81",
+    "guard/build/droneid_guard.bin": "4adfcafc4637362c12e230fd00dc34afc21640551b992918c07302981d425444",
+    "tools/mavlink_receiver.py": "81aefad37aa5ecf8e7332a661e96ddc80f9c4a43cc8764cb429480fbcd4e100e",
+    "tools/dashboard.py": "2e4dab7f611580d05a4d246e7d5e747055cc7d4b0d21ff5e4babf8ae92307635",
+    "web/app.js": "a45f4f87905cd6df41a3167f9feb713b509e68f13f932883beaa1b5a0c4b7222",
+    "tests/test_uart_guard.c": "90c9b0914040bfcb5ab3c1b559050c01c7053c8dbffe91fdfabdc97ab68c1f55",
+    "tests/test_uart_guard.py": "3a11077e4006076a7b8617412ee91d9ebd63739f2bf54549a012942a861a9790",
+    "tests/run_host_tests.sh": "b4319568faf7e0d0abab063e28801566344dbba1b96d55bbfa9eb6b6457770f5"
+  }
+}

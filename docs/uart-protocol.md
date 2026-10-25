@@ -4,6 +4,15 @@ Wiring and startup instructions are in the [README](../README.md#flight-controll
 This is the ESP32-side transport implementation. A physical controller/downlink
 round trip is not yet verified. USB remains schema-1 JSONL; hardware UART1 carries
 binary MAVLink. Both outputs receive independent copies of radio observations.
+For P0 containment, the [independent guard](../guard/README.md) changes the
+FC-facing envelope as described below; the radio sensor's own UART format stays
+unchanged. Direct sensor-to-FC wiring does not apply the guard policy.
+Alternatively, the standalone [FC-side UART4 filter](../fc_filter/README.md)
+accepts the radio's DRID reports directly, applies its own budgets and excludes
+ordinary command handlers on the protected port. It normalizes reports to DRG2
+before native parsing/routing. No second XIAO is required. ArduPilot routes
+reports after native signature checks; iNav consumes them. Combining the FC
+filter with the external guard is optional and also supported.
 The default D6 TX pin can carry the chip's ROM startup banner before application
 initialization. Receivers must resynchronize after noise/reset, as the standard
 MAVLink parser does; no eFuse changes are made to suppress ROM output.
@@ -80,6 +89,42 @@ Health fields are eleven uint32 values starting at offset 40:
 Counters reset on boot and can wrap. Session/sequence distinguish restarts and
 missing reports. Health emits every two seconds. No message is authenticated
 by this record format; base-station parsing must retain that distinction.
+
+## Guarded DRG2 envelope
+
+The independent guard accepts the DRID v1 records above but emits an alternative
+TUNNEL payload toward the FC:
+
+```text
+ASCII "DRG2" + canonical Base64 of the complete DRID v1 record
+```
+
+Observation payload length is **108**; health payload length is **116**. Both
+record sizes are divisible by three, so Base64 padding is absent. `payload_type`
+remains 0. Source defaults to vehicle **1**, guard component **243**, with fixed
+destination **255/190**. In the external-guard topology, sensor component **242**
+is on the sensor-facing link. With the standalone FC filter, the radio's DRID
+arrives directly from **242** and the FC generates DRG2 while preserving source
+component **242**. DRG2 does not imply that an external guard exists.
+The heartbeat is regenerated as a non-autopilot component with no control
+mode flags. Broadcast targets, unsupported flags and signed frames are rejected.
+
+The guard excludes `0xFD`/`0xFE` from every FC-bound frame after its initial
+`0xFD`, including header sequence and CRC. This prevents an interior payload
+from becoming another frame when the FC parser restarts midstream on an intact
+wire. See the [framing rationale](../guard/README.md#why-reports-use-drg2).
+
+The updated base-station helper accepts both original DRID and DRG2, unwraps
+DRG2 exactly once with strict Base64/length/version checks, then applies the
+existing DRID decoder. `wire_encoding: "drg2_base64"` is format metadata, not
+authentication. Original raw RID, receiver/session, sequence, times and RSSI
+are preserved; the reporter and aircraft remain unauthenticated by this format.
+
+Guard observations use 125 UART bytes, health 133, heartbeat 21. At the fixed
+5 observations/s, 0.5 health/s and 1 heartbeat/s, the nominal ceiling is about
+713 bytes/s. An independent 800 bytes/s token budget with a 160-byte burst also
+applies. The guard's latest-value slots coalesce excess reports; these drops
+are counted in guard USB diagnostics, not substituted into sensor health claims.
 
 ## Capacity and input behavior
 

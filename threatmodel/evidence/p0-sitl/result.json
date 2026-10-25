@@ -1,0 +1,221 @@
+{
+  "scope": "ArduCopter 4.6.3 SITL, standalone FC filter, unsigned loopback links; no hardware",
+  "test_sha256": "5e412f3f47989d3838ca5b08aab91702f4986a7b99f26a63dca8967ece700980",
+  "limitations": [
+    "No UART electrical, IRQ/DMA, physical reset or power measurements",
+    "Disarmed only; no armed flight, RC effect or failsafe-authority assertion",
+    "Checks WPNAV_SPEED sentinel, mode and stored mission, not all FC parameters",
+    "Three-second floods are smoke tests; no vehicle latency budget qualified",
+    "External guard, iNav and signed downlink not exercised"
+  ],
+  "result": "passed",
+  "source": {
+    "firmware": "ardupilot",
+    "revision": "92b0cd788ec29406f26c6f9c31d5ceedbd1cc538",
+    "status": "verified",
+    "physical_port": 4
+  },
+  "binary_sha256": "03946a7bcc330337c95fb1184a005982d741b47716074dddf81cef44b1804556",
+  "positive_controls": [
+    "mode",
+    "parameter",
+    "mission_upload"
+  ],
+  "before": {
+    "custom_mode": 0,
+    "armed": false,
+    "WPNAV_SPEED": 500.0,
+    "mission": [
+      {
+        "mavpackettype": "MISSION_ITEM_INT",
+        "seq": 0,
+        "frame": 0,
+        "command": 16,
+        "current": 0,
+        "autocontinue": 1,
+        "param1": 0.0,
+        "param2": 0.0,
+        "param3": 0.0,
+        "param4": 0.0,
+        "x": 0,
+        "y": 0,
+        "z": 0.0,
+        "mission_type": 0
+      },
+      {
+        "mavpackettype": "MISSION_ITEM_INT",
+        "seq": 1,
+        "frame": 3,
+        "command": 16,
+        "current": 0,
+        "autocontinue": 1,
+        "param1": 0.0,
+        "param2": 0.0,
+        "param3": 0.0,
+        "param4": 0.0,
+        "x": -353632510,
+        "y": 1491652300,
+        "z": 20.0,
+        "mission_type": 0
+      }
+    ]
+  },
+  "after": {
+    "custom_mode": 0,
+    "armed": false,
+    "WPNAV_SPEED": 500.0,
+    "mission": [
+      {
+        "mavpackettype": "MISSION_ITEM_INT",
+        "seq": 0,
+        "frame": 0,
+        "command": 16,
+        "current": 0,
+        "autocontinue": 1,
+        "param1": 0.0,
+        "param2": 0.0,
+        "param3": 0.0,
+        "param4": 0.0,
+        "x": 0,
+        "y": 0,
+        "z": 0.0,
+        "mission_type": 0
+      },
+      {
+        "mavpackettype": "MISSION_ITEM_INT",
+        "seq": 1,
+        "frame": 3,
+        "command": 16,
+        "current": 0,
+        "autocontinue": 1,
+        "param1": 0.0,
+        "param2": 0.0,
+        "param3": 0.0,
+        "param4": 0.0,
+        "x": -353632510,
+        "y": 1491652300,
+        "z": 20.0,
+        "mission_type": 0
+      }
+    ]
+  },
+  "delivered_reports": [
+    {
+      "schema": 1,
+      "kind": "observation",
+      "receiver_id": "102030405060",
+      "session": "00000000000004d2",
+      "seq": 0,
+      "rx_us": 100,
+      "reported_us": 200,
+      "wire_encoding": "drg2_base64",
+      "transport": "wifi_beacon",
+      "rssi_dbm": -47,
+      "source_address": "02:03:04:05:06:07",
+      "source_address_type": null,
+      "channel": 6,
+      "message_counter": 1,
+      "pack_index": 0,
+      "pack_size": 1,
+      "raw_message_hex": "0241ff50302d53434f55540000000000000000000000000000",
+      "message_type": "basic_id",
+      "protocol_version": 2,
+      "authentication": "unverified",
+      "uas_id_hex": "ff50302d53434f55540000000000000000000000",
+      "broadcast_id": "P0-SCOUT"
+    },
+    {
+      "schema": 1,
+      "kind": "observation",
+      "receiver_id": "102030405060",
+      "session": "00000000000004d2",
+      "seq": 1,
+      "rx_us": 100,
+      "reported_us": 200,
+      "wire_encoding": "drg2_base64",
+      "transport": "wifi_beacon",
+      "rssi_dbm": -47,
+      "source_address": "02:03:04:05:06:07",
+      "source_address_type": null,
+      "channel": 6,
+      "message_counter": 1,
+      "pack_index": 0,
+      "pack_size": 1,
+      "raw_message_hex": "320050302068656c6c6f000000000000000000000000000000",
+      "message_type": "self_id",
+      "protocol_version": 2,
+      "authentication": "unverified",
+      "hello": "P0 hello"
+    }
+  ],
+  "denied_classes": [
+    "set_mode",
+    "param_set",
+    "mission_clear",
+    "mission_upload",
+    "command_arm",
+    "command_reboot",
+    "rc_override",
+    "fake_gcs_heartbeat",
+    "param_list"
+  ],
+  "spoofed_sources": [
+    [
+      1,
+      242
+    ],
+    [
+      255,
+      190
+    ],
+    [
+      1,
+      1
+    ]
+  ],
+  "malformed_cases": 4,
+  "nested_command_opaque": true,
+  "floods": [
+    {
+      "kind": "valid_reports",
+      "bytes_sent": 34506,
+      "seconds": 3.009465785988141,
+      "reports_delivered": 4,
+      "max_heartbeat_gap_s": 1.0064273329917341
+    },
+    {
+      "kind": "denied_commands",
+      "bytes_sent": 34542,
+      "seconds": 3.009395067987498,
+      "reports_delivered": 0,
+      "max_heartbeat_gap_s": 1.000058444973547
+    }
+  ],
+  "recovery_report": true,
+  "simulator_exit_code": 0,
+  "review_date": "2026-10-24",
+  "captures": {
+    "base.jsonl.gz": {
+      "uncompressed_sha256": "e62a898c8b249c4b4fb20783307aaed43be4b2de2ddd28be6f2c64168f6bb76d",
+      "bytes": 19149
+    },
+    "sensor.jsonl.gz": {
+      "uncompressed_sha256": "1d3ea8797f4d66fc1cd01796a266f0cbb1739148fbeb9b29bb7ac2f93603875d",
+      "bytes": 286675
+    },
+    "sitl.log.gz": {
+      "uncompressed_sha256": "9fb447e53e7e20d31c2a70adfbc3a986006a41733cfee2f1ea3745595c8a1a01",
+      "bytes": 1169
+    },
+    "build.log.gz": {
+      "uncompressed_sha256": "5f12ef1828185c043031ecef82a6a0ef41dbb08f6f9f2937f6067f66ee229c11",
+      "bytes": 3913
+    }
+  },
+  "harness_setup_corrections": [
+    "Wait for ArduPilot Ready before mission setup",
+    "Use documented Wi-Fi record sentinel 255 and preserve direct component 242",
+    "Do not select UART9: pinned SITL exposes that option but its path array has only nine entries (0..8)",
+    "Require a clean simulator exit as part of the result"
+  ]
+}

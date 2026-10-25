@@ -1,0 +1,48 @@
+{
+  "inav": {
+    "tag": "9.0.0",
+    "commit": "a7932b92eadd92ba7851a009a5c974b9cc24835d",
+    "before": {
+      "src/main/io/serial.c": "379846769423191ab8d49b048a2a6d64636e311226a3a42e2e04110b95b32825",
+      "src/main/telemetry/mavlink.c": "bcd2c631da283d1814bce11a1d918f96c76433df3b64598df49c06977fce8093"
+    },
+    "after": {
+      "src/main/io/serial.c": "bcd912502defcc03f929631210d53ee8c79dce5019be19dcb377ae5946de4f7f",
+      "src/main/telemetry/mavlink.c": "2fc93b6504cbfec94ceee6a561c6727d5c7bab24036f9e1f29e7f75ece3ca3c1"
+    },
+    "board_files": {
+      "src/main/target/MICOAIR743V2/target.h": "68d487de488b5f93906a0c3b8a12d3b7d1b7c303ff967034fbba627d54513567",
+      "src/main/target/MICOAIR743V2/CMakeLists.txt": "048b17fa04cb9d30e7675fe7a92d3bf374cd567e1e35b8393bfd271353cce440"
+    },
+    "copies": {
+      "droneid_fc_filter.h": "src/main/io/droneid_fc_filter.h",
+      "inav_receive.inc": "src/main/telemetry/droneid_receive.inc"
+    }
+  },
+  "ardupilot": {
+    "tag": "Copter-4.6.3",
+    "commit": "92b0cd788ec29406f26c6f9c31d5ceedbd1cc538",
+    "before": {
+      "libraries/GCS_MAVLink/GCS.h": "b2fea4481302d6a474544c826eaf875a0b8b8f433695b510ff71cfe6251d1edf",
+      "libraries/GCS_MAVLink/GCS_Common.cpp": "63a1129b3de96ebf3281839e44a38d87c9cf777dc1f924fb33fe365521c1c314",
+      "libraries/GCS_MAVLink/GCS_serial_control.cpp": "77c19e0086aaf1c913f085b703b7949731e5f7277ee1319e6e8a917299fcfceb",
+      "libraries/AP_SerialManager/AP_SerialManager.cpp": "5084d908ff01fdd941d06694a87ec3637f6d1c8d50106f6ae5231e9a96e8e0df",
+      "libraries/AP_SerialManager/AP_SerialManager.h": "5ec183304ed8f3109c29bcf6572e38534d1e41f1b43c885a538b7ac8c5a1bc05"
+    },
+    "after": {
+      "libraries/GCS_MAVLink/GCS.h": "952d2af0ebf183f97495ec5c0847298357eb98c9a61d6e8a53558f4f7eed2a66",
+      "libraries/GCS_MAVLink/GCS_Common.cpp": "c2bffbc159bf5c684805fe8322b636b09ad8bc8528838f2d906e67c6ad6d9f19",
+      "libraries/GCS_MAVLink/GCS_serial_control.cpp": "31761a11bad7ead91e12e8cd4a45c1f0acd4a856f66939c108a53cfd5057e59c",
+      "libraries/AP_SerialManager/AP_SerialManager.cpp": "409e88e0b065eed9f5564d422d728f3acd0dbbbf387237ae65084ab1b7e3307f",
+      "libraries/AP_SerialManager/AP_SerialManager.h": "dfbd330a3211d3e51ace22c7568ac4246f09fc5500d57f1d44779ef6ebe4a54c"
+    },
+    "board_files": {
+      "libraries/AP_HAL_ChibiOS/hwdef/MicoAir743v2/hwdef.dat": "cd1eafcb5df04ea9f878031349882a0339bb3e358f2b72106d20f787705a10dc",
+      "ArduCopter/GCS_Mavlink.cpp": "11a6520d9154a3b6cab7b857a081294afdd583a72ff57b195da134e2bc5094c5"
+    },
+    "copies": {
+      "droneid_fc_filter.h": "libraries/AP_Common/droneid_fc_filter.h",
+      "ardupilot_receive.inc": "libraries/GCS_MAVLink/droneid_receive.inc"
+    }
+  }
+}

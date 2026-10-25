@@ -13,12 +13,12 @@
     <a class="brand" href="/" aria-label="DroneID home"><span class="brand-symbol">⌁</span><span>DroneID<small>RADIO BENCH</small></span></a>
     <div class="sidebar-heading"><span>USB DEVICES</span><span id="device-count" class="count">0</span></div>
     <div id="devices" class="devices"><p class="muted">Looking for connected boards…</p></div>
-    <div class="sidebar-foot"><span class="status-dot" id="server-dot"></span><span id="server-state">Connecting to local server</span><small>Seeed XIAO · ESP32-C5</small></div>
+    <div class="sidebar-foot"><span class="status-dot" id="server-dot"></span><span id="server-state">Connecting to local server</span><small>Seeed XIAO · radios & UART guards</small></div>
   </aside>
   <main>
-    <header class="page-heading"><div><div class="eyebrow">WORKSPACE / USB LAB</div><h1>Radio bench<span class="heading-dot">.</span></h1><p>Configure your boards. See what they hear.</p></div><button class="button secondary" id="refresh">↻ Refresh devices</button></header>
+    <header class="page-heading"><div><div class="eyebrow">WORKSPACE / USB LAB</div><h1>Radio bench<span class="heading-dot">.</span></h1><p>Configure your radios. Provision and test UART guards.</p></div><button class="button secondary" id="refresh">↻ Refresh devices</button></header>
     <div id="error" class="error-banner" role="alert" hidden></div>
-    <section id="no-device" class="welcome" hidden><div class="welcome-icon">⌁</div><h2>Connect your first board</h2><p>Plug a XIAO ESP32-C5 into USB. It will appear here automatically.</p><p class="muted">Use a data cable. Close other serial monitors to make the port available.</p></section>
+    <section id="no-device" class="welcome" hidden><div class="welcome-icon">⌁</div><h2>Connect your first board</h2><p>Plug a radio C5 or guard C5 / C6 / S3 into native USB. It will appear here automatically.</p><p class="muted">Use a data cable. Close other serial monitors to make the port available.</p></section>
     <section id="workspace" hidden>
       <div class="device-heading"><div><span class="eyebrow">SELECTED DEVICE</span><h2 id="selected-name"></h2><div id="selected-meta" class="muted mono"></div></div><div class="device-actions"><span id="device-state" class="badge"></span><button id="identify" class="button secondary" title="Flash this board’s LED for 5 seconds over USB">Identify</button><button id="monitor-toggle" class="button secondary">Pause monitor</button></div></div>
       <nav class="tabs" role="tablist" aria-label="Device views"><button id="tab-nearby" role="tab" aria-selected="true" aria-controls="panel-nearby" data-tab="nearby">Nearby broadcasts <span id="nearby-count" class="tab-count">0</span></button><button id="tab-logs" role="tab" aria-selected="false" aria-controls="panel-logs" data-tab="logs">Live log</button><button id="tab-settings" role="tab" aria-selected="false" aria-controls="panel-settings" data-tab="settings">Device settings</button></nav>
@@ -32,8 +32,19 @@
         <pre id="log-stream" tabindex="0" aria-label="Live JSON log"></pre><p class="fine-print">The view keeps the latest 500 records. Full captures rotate in logs/web on this computer.</p>
       </section>
       <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <div class="panel device-role-panel">
+          <div class="role-heading"><div><span class="eyebrow">DEVICE ROLE</span><h3>What should this board do?</h3></div><span id="running-role" class="badge"></span></div>
+          <fieldset class="device-role-options" aria-describedby="device-role-help">
+            <legend class="sr-only">Choose Scout or Guard</legend>
+            <label class="device-role-option"><input id="device-role-scout" type="radio" name="device_role" value="scout"><span><strong>Scout</strong><small>Receive and broadcast nearby drone IDs over Wi-Fi / BLE.</small><em>XIAO ESP32-C5</em></span></label>
+            <label class="device-role-option"><input id="device-role-guard" type="radio" name="device_role" value="guard"><span><strong>Guard</strong><small>Filter UART traffic between a Scout and the flight controller.</small><em>XIAO ESP32-C5 / C6 / S3 · radios disabled</em></span></label>
+          </fieldset>
+          <p id="device-role-help" class="field-help">Choose a role, then install its firmware below. Selecting a role alone does not change the device.</p>
+          <p id="role-change-note" class="notice" hidden></p>
+        </div>
+        <div id="scout-settings">
         <div class="settings-grid"><form id="settings-form" class="panel"><div class="panel-top"><span class="eyebrow">CONFIGURATION</span><h3>Identity & broadcast</h3><p>Saved on the board, including when powered without USB.</p></div><div id="upgrade-note" class="notice" hidden>Flash the current firmware to enable ID and hello-message settings.</div><fieldset id="settings-fields"><label for="broadcast-id">Broadcast ID <span>19 characters max</span></label><input id="broadcast-id" name="broadcast_id" maxlength="19" pattern="[A-Za-z0-9._\-]{1,19}" required placeholder="SCOUT-01" autocomplete="off"><p class="field-help">Letters, numbers, dots, underscores, and hyphens.</p><label for="hello">Hello message <span id="hello-count">0 / 23</span></label><input id="hello" name="hello" maxlength="23" placeholder="Hello from scout 01" autocomplete="off"><p class="field-help">Short public message. Use printable ASCII characters.</p><div class="form-row"><div><label for="role">Operating mode</label><select id="role" name="role"><option value="both">Receive + broadcast</option><option value="rx">Receive only</option><option value="tx">Broadcast only</option></select></div><div><label for="transport">Broadcast using</label><select id="transport" name="transport"><option value="wifi">Wi-Fi Beacon</option><option value="ble">Bluetooth LE</option></select></div></div><p class="field-help mode-help">Receive mode listens on BLE and Wi-Fi. Broadcasting uses only the selected protocol.</p><div class="form-actions"><span id="save-state" class="muted">All changes saved</span><button type="submit" id="save" class="button primary">Save to device</button></div></fieldset></form>
-        <div class="panel firmware-panel"><div class="panel-top"><span class="eyebrow">FIRMWARE</span><h3>Program this board</h3><p>Install the local project build on the selected USB device.</p></div><div class="firmware-art"><svg viewBox="0 0 120 90" aria-hidden="true"><path d="M20 26h18m-18 12h18m-18 12h18m-18 12h18m44-36h18M82 38h18M82 50h18M82 62h18M46 8v14m14-14v14m14-14v14M46 68v14m14-14v14m14-14v14"/><rect x="36" y="20" width="48" height="50" rx="7"/><path d="m54 34 15 11-15 11z"/></svg><span>ESP32-C5</span></div><dl class="firmware-info"><div><dt>Available build</dt><dd id="build-version">—</dd></div><div><dt>Running firmware</dt><dd id="running-version">—</dd></div><div><dt>Target USB serial</dt><dd id="flash-serial" class="mono">—</dd></div></dl><p id="build-note" class="field-help"></p><button id="flash" class="button dark">↓ Flash this device</button><p class="fine-print">Saved identity and settings are preserved. Other boards keep monitoring.</p></div></div>
+        <div class="panel firmware-panel"><div class="panel-top"><span class="eyebrow">FIRMWARE</span><h3>Scout firmware</h3><p>Install the local project build on the selected USB device.</p></div><div class="firmware-art"><svg viewBox="0 0 120 90" aria-hidden="true"><path d="M20 26h18m-18 12h18m-18 12h18m-18 12h18m44-36h18M82 38h18M82 50h18M82 62h18M46 8v14m14-14v14m14-14v14M46 68v14m14-14v14m14-14v14"/><rect x="36" y="20" width="48" height="50" rx="7"/><path d="m54 34 15 11-15 11z"/></svg><span>ESP32-C5</span></div><dl class="firmware-info"><div><dt>Available build</dt><dd id="build-version">—</dd></div><div><dt>Running firmware</dt><dd id="running-version">—</dd></div><div><dt>Target USB serial</dt><dd id="flash-serial" class="mono">—</dd></div></dl><p id="build-note" class="field-help"></p><button id="flash" class="button dark">↓ Install Scout firmware</button><p class="fine-print">Scout identity settings are preserved. Other boards keep monitoring.</p></div></div>
         <form id="uart-form" class="panel uart-panel">
           <div class="panel-top"><span class="eyebrow">FLIGHT CONTROLLER</span><h3>UART · MAVLink 2</h3><p>Send received identities and signal measurements to your downlink. USB monitoring stays available.</p><a class="guide-link" href="/README.md" target="_blank" rel="noreferrer">Wiring & setup instructions ↗</a></div>
           <p id="uart-upgrade" class="notice" hidden>Flash firmware 0.5.0 or newer to configure UART.</p>
@@ -52,6 +63,31 @@
             <div class="form-actions"><span id="uart-save-state" class="muted">All UART changes saved</span><button id="uart-save" class="button primary" type="submit">Save UART settings</button></div>
           </fieldset>
         </form>
+        </div>
+        <div id="guard-settings" hidden>
+        <div class="guard-intro"><div><span class="eyebrow">GUARD / UART FILTER</span><h3>Guard firmware & tests.</h3><p>A dedicated board between the radio and the flight controller. The filter inside the FC is a separate alternative.</p></div><a class="button secondary" href="/guard/README.md" target="_blank" rel="noreferrer">Guard guide ↗</a></div>
+        <div class="settings-grid guard-grid">
+          <div class="panel"><div class="panel-top"><span class="eyebrow">01 / FIRMWARE</span><h3>Choose the physical model</h3><p>Check the board label. USB detection alone cannot identify the XIAO model.</p></div>
+            <label for="guard-model">Guard board</label><select id="guard-model"><option value="">Select a model…</option></select>
+            <p id="guard-model-note" class="field-help"></p><dl class="firmware-info"><div><dt>Selected USB serial</dt><dd id="guard-serial" class="mono"></dd></div><div><dt>Local guard build</dt><dd id="guard-build"></dd></div><div><dt>Running guard</dt><dd id="guard-running"></dd></div></dl>
+            <p id="guard-build-note" class="field-help"></p><code id="guard-build-command" class="guard-command"></code>
+            <p class="notice">Install firmware with both UART links disconnected. Use this board’s USB connection for programming.</p>
+            <button id="guard-flash" class="button dark">↓ Install Guard firmware</button>
+          </div>
+          <div class="panel"><div class="panel-top"><span class="eyebrow">02 / USB CHECK</span><h3>Check the running guard</h3><p>Verify two fresh status samples, the selected build hash, uptime, readiness and the boot policy self-test.</p></div>
+            <div id="guard-status" class="guard-status" aria-live="polite"></div><div id="guard-counters" class="guard-counters"></div>
+            <button id="guard-check" class="button primary">Run USB check</button><p class="field-help">Diagnostic evidence only. USB cannot verify UART wiring or prove firmware authenticity. Live log keeps this device’s status stream.</p>
+            <div class="guard-wiring"><strong>Same pad labels on C5 / C6 / S3</strong><p>Radio TX → D9 RX · D8 TX → radio RX<br>D4 TX → FC RX · FC TX → D5 RX<br>Common GND · 115200 baud · 3.3 V logic</p><p>Leave guard D6/D7, BOOT, RESET and debug pads unconnected. GPIO numbers vary by model.</p></div>
+          </div>
+        </div>
+        <details class="panel guard-fixture"><summary>03 / Wired UART test · two USB adapters</summary>
+          <p>Connect two 3.3 V USB-to-UART adapters to this guard. Remove the radio and flight controller from the fixture. Power the guard through its USB; leave adapter power pins disconnected.</p>
+          <div class="form-row"><div><label for="guard-sensor-adapter">Sensor-side adapter</label><select id="guard-sensor-adapter"><option value="">Choose adapter…</option></select><p class="field-help">Adapter TX → D9 · RX ← D8 · GND → GND</p></div><div><label for="guard-fc-adapter">FC-side adapter</label><select id="guard-fc-adapter"><option value="">Choose adapter…</option></select><p class="field-help">Adapter TX → D5 · RX ← D4 · GND → GND</p></div></div>
+          <p id="guard-fixture-note" class="field-help"></p><label class="guard-confirm"><input id="guard-fixture-confirm" type="checkbox">Both adapters are wired to the selected guard; the radio and flight controller are disconnected.</label>
+          <button id="guard-uart-test" class="button secondary">Run wired UART test</button><p class="field-help">Six-second test: report forwarding, return heartbeat, forbidden parameter requests and bad CRC. Full-rate traffic, resets, power faults and FC routing still require hardware acceptance.</p>
+        </details>
+        <details class="panel guard-catalog"><summary>XIAO compatibility & porting candidates</summary><div id="guard-models" class="guard-models"></div><p class="field-help">Profiles are build-tested; physical hardware acceptance is pending for every model. A firmware port is required for each candidate. Other XIAO families have not been assessed here.</p></details>
+        </div>
       </section>
       <section id="job-panel" class="job-panel" hidden aria-live="polite"><div><span id="job-icon"></span><strong id="job-title"></strong><span id="job-message" class="muted"></span></div><details><summary>Operation output</summary><pre id="job-output"></pre></details></section>
     </section>

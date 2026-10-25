@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-24",
+  "change": "Replace separate guard tab with explicit Scout/Guard roles inside Device settings; add guard wiring illustration and P0 closure checklist.",
+  "host_validation": {
+    "python_tests": 41,
+    "sanitizer_suites": 6,
+    "result": "passed"
+  },
+  "browser": {
+    "browser_errors": [],
+    "routes_verified": [
+      [
+        "/api/devices/102030405060/provision",
+        {
+          "board": "xiao_esp32c5",
+          "fingerprint": "9a114af3c8b0425ded4fdf912414fb23a5d886169bcb32a51dd0e3cc222a6ee6",
+          "role": "guard"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-check",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "36cb67732bf47648626401b74fa03e761f7b67903e6d1f4947030ba0b2109161"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-uart-test",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "36cb67732bf47648626401b74fa03e761f7b67903e6d1f4947030ba0b2109161",
+          "sensor_adapter": "a",
+          "fc_adapter": "b",
+          "fixture_confirmed": true
+        }
+      ],
+      [
+        "/api/devices/102030405062/provision",
+        {
+          "role": "scout",
+          "board": "xiao_esp32c5",
+          "fingerprint": "scout-build"
+        }
+      ]
+    ],
+    "responsive_width": 390
+  },
+  "role_semantics": [
+    "Selecting a role alone does not perform a mutation.",
+    "Guard-to-Scout conversion is explicit; only C5 Scout firmware is supported.",
+    "Ordinary radio flash remains blocked for recognized guards.",
+    "Failed or unverified conversion retains guard classification."
+  ],
+  "illustration": {
+    "path": "guard/images/scout-guard-fc.png",
+    "method": "Built-in imagegen using project wiring illustration as reference",
+    "prompt": "guard/images/guard-wiring.prompt.txt",
+    "review": "C5 physical pads and four directed UART paths visually checked; logical connector breakout is not cable pin order."
+  },
+  "p0_status": "Open for deployment: hardware, FC authority/timing, reset/failure, downlink and electrical acceptance pending. iNav report forwarding not implemented.",
+  "hardware_actions": "No boards flashed or reconfigured; no physical UART fixture or FC tests performed.",
+  "sha256": {
+    "web/index.html": "de1f72a2563b7bd44509555072c6d872a6f60caed6ad19dbf7877820fb06d46e",
+    "web/app.js": "430413e6365dd233b03b8cde9977817c071bb58d96bcc5b4bcb4ebbdd69670a5",
+    "web/style.css": "4dd4307b609174d3f7f7598f39adc76c67788a19acb3f7e6ecc6aa9a52963d3e",
+    "tools/dashboard.py": "4e43c3baf3955e08414570527b2c8f442050977139dec88bd7c77fc6df55e2a0",
+    "tools/server.py": "cc37292d698aad40e32ac14f093340dd122820345bc0c474a5ddc4d0be0accec",
+    "tests/check_guard_ui.py": "3936dcdc50c52a407c23d996a31d40b4f158bf4d4814655b29119f601aca0a8b",
+    "tests/test_guard_bench.py": "30638ed9f29b2dde67748906a34b6b7602ba0f5ba4bb60d68b68c1c4ff418787",
+    "guard/images/scout-guard-fc.png": "4ec0ac12838f55162184146a1fa9b9fa41708e6d57bf4629e70378f2d5eb8366"
+  }
+}

@@ -25,12 +25,28 @@ module to a flight controller. Received IDs are unverified claims; the model
 covers radio interference, ESP32 compromise, the UART trust boundary, and the
 web bench, with a prioritized hardening plan and reproducible offline checks.
 
+**P0 containment offers two alternatives:** use the [FC UART4 filter](fc_filter/README.md)
+with **one radio XIAO and custom FC firmware**, or insert a
+[second XIAO UART guard](guard/README.md) and retain stock FC firmware.
+Using both is optional. The FC option accepts the radio's existing UART reports
+directly; no intermediate board is required. See the
+[deployment diagram](fc_filter/topology.svg). **P0 is partially closed, pending full validation**; hardware, FC/downlink and power-fault acceptance remain open. Resume with the [P0 verification plan](threatmodel/p0-verification-plan.md); results are tracked in the [P0 closure checklist](threatmodel/p0-acceptance.md).
+
+In the web bench, open **Device settings** and choose **Scout** or **Guard** for the selected board. Scout provides radio features; Guard provides firmware installation, USB checks and wired UART tests for C5, C6 and S3 profiles. See [supported XIAO guards and setup](guard/README.md#supported-xiao-models).
+
 ## Flight-controller wiring and UART setup
 
 Setup links: [ESP32](#configure-the-esp32) ·
 [ArduPilot](#ardupilot-on-the-micoair--uart4--serial4) ·
 [iNav](#inav-on-the-micoair--uart4-bench-input) ·
 [Connection checks](#check-the-connection) · [Troubleshooting](#uart-troubleshooting).
+
+**Choose the wiring for your security option.** The direct wiring below connects
+one radio XIAO to the [custom FC filter](fc_filter/README.md#build-and-install-in-an-fc-source-checkout).
+For the external guard option, use the [two-XIAO wiring table and SVG](guard/README.md#connection);
+no FC filter patch is required. Direct radio wiring to stock FC firmware has
+neither boundary. The stock controller settings below establish connectivity;
+they do not install the FC-side filter.
 
 Use a free, **non-inverted, full-duplex UART with 3.3 V logic** on the controller.
 The XIAO uses hardware UART1 independently of its USB connection. Pin names
@@ -199,6 +215,8 @@ The block describes parameter values, not commands to paste into a shell.
    Set the **XIAO's vehicle system ID** to that existing value. This module
    supports IDs 1–255. Keep controller component **1** and use module component
    **242** if it is unused. The broadcast DroneID string is a separate identity.
+   With the independent guard, retain sensor component **242** and reserve
+   **243** for the guard; the FC sees the guard's regenerated reports from 243.
 5. On the FC's **existing telemetry-radio port**, select MAVLink 2
    (`SERIALn_PROTOCOL=2`) and keep the baud rate required by that radio. For
    example, a radio on UART1 uses `SERIAL1`; a 57600-baud radio uses
@@ -487,6 +505,17 @@ Close other serial monitors before starting the server. Use `--port 8767` if
 8766 is occupied. See the [web bench guide](docs/web-bench.md) for first-time
 setup, limits, and recovery.
 
+### Scout and Guard roles
+
+In **Device settings**, choose the selected device's **Scout** or **Guard** role.
+The controls follow that choice. Role selection alone does not flash or change the
+board; use **Install Scout firmware** or **Install Guard firmware** to apply it.
+Scout supports C5; Guard has C5, C6 and S3 firmware profiles. It includes a model catalog, local build checks, per-board
+flash output, a USB/startup-policy check and an optional two-adapter UART smoke
+test. See [build profiles, pin mappings and fixture instructions](guard/README.md#web-bench-flash-and-test-guards).
+Hardware acceptance remains pending. The FC software filter remains an
+alternative to the separate guard board.
+
 ## Use the USB command-line bench
 
 Install the Python dependency in your chosen environment, or use ESP-IDF's
@@ -539,6 +568,15 @@ The browser controls and a local UDP receiver test passed. External UART signal
 capture and an actual controller/downlink round trip remain to be tested.
 Hardware verification results are recorded in the USB bench guide.
 
+The independent guard adds a third C sanitizer suite for its allowlist, schema,
+frame-boundary recovery, bidirectional policy and work/rate budgets. Reference
+pymavlink tests decode its DRG2 reports through the base-station helper.
+See [guard validation and remaining acceptance](guard/README.md#validation-and-remaining-acceptance).
+Three further C/C++ sanitizer suites exercise the FC policy, direct-radio input
+and actual receive adapters, including signature rejection and report-only routing.
+The installer tests verify safe refusal of changed source, board or policy files.
+See [FC filter verification](fc_filter/README.md#verification-and-acceptance).
+
 ## Project structure
 
 | Path | Purpose |
@@ -549,6 +587,9 @@ Hardware verification results are recorded in the USB bench guide.
 | `main/radio.c` | Receive scheduling and exclusive broadcast transport selection |
 | `main/fc_uart.c` | Independent UART1 worker, bounded queue, rate limits, and health |
 | `components/fc_link/` | Portable UART configuration and MAVLink adapter |
+| [Independent UART guard](guard/README.md) | Separate radio-free firmware project for a second XIAO between sensor and FC |
+| `components/uart_guard/` | Portable guard policy, bounded parsing and regenerated MAVLink output |
+| [FC UART filter](fc_filter/README.md) | Independent FC ingress policy, pinned ArduPilot/iNav patches, installer and portrait topology |
 | `components/mavlink/` | Pinned official MAVLink common C headers |
 | `components/rid/` | Portable advertisement framing and observation serialization |
 | `components/opendroneid/` | Pinned upstream codec, license, and documented local changes |

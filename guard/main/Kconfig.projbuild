@@ -1,0 +1,26 @@
+menu "DroneID independent UART guard"
+    config GUARD_SYSTEM_ID
+        int "Vehicle system ID"
+        range 1 252
+        default 1
+    config GUARD_SENSOR_COMPONENT
+        int "Radio sensor component ID"
+        range 1 252
+        default 242
+    config GUARD_COMPONENT
+        int "Guard component ID (distinct from sensor and controller)"
+        range 1 252
+        default 243
+    config GUARD_FC_COMPONENT
+        int "Controller component ID"
+        range 1 252
+        default 1
+    config GUARD_TARGET_SYSTEM
+        int "Base-station system ID (must differ from vehicle; 253/254 forbidden)"
+        range 1 255
+        default 255
+    config GUARD_TARGET_COMPONENT
+        int "Base-station component ID"
+        range 1 252
+        default 190
+endmenu

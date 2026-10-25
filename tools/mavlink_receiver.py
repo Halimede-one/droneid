@@ -2,6 +2,8 @@
 """Decode DroneID TUNNEL reports from a serial port or MAVLink UDP downlink."""
 
 import argparse
+import base64
+import binascii
 from datetime import datetime, timezone
 import json
 import struct
@@ -19,6 +21,17 @@ def decode_payload(payload, length):
     if not 0<=length<=128 or len(payload)<length:
         raise ValueError('Invalid TUNNEL payload length')
     data=bytes(payload[:length])
+    guarded = data.startswith(b'DRG2')
+    if guarded:
+        if len(data) not in (108,116):
+            raise ValueError('Invalid guarded report size')
+        try:
+            raw=base64.b64decode(data[4:],validate=True)
+        except (ValueError,binascii.Error) as exc:
+            raise ValueError('Invalid guarded report encoding') from exc
+        if base64.b64encode(raw)!=data[4:] or not raw.startswith(b'DRID'):
+            raise ValueError('Invalid guarded report content')
+        data=raw
     if not data.startswith(b'DRID'):
         return None
     if len(data)<HEADER.size:
@@ -28,6 +41,10 @@ def decode_payload(payload, length):
     record={'schema':1,'kind':'observation' if kind==1 else 'uart_health',
             'receiver_id':receiver.hex(),'session':f'{session:016x}','seq':seq,
             'rx_us':received,'reported_us':reported}
+    if guarded:
+        # This is an encoding claim, not proof of a trusted physical guard or
+        # authenticated reporter. An untrusted sender can generate it too.
+        record['wire_encoding']='drg2_base64'
     if received>reported:raise ValueError('Receive time is later than reporting time')
     if kind==1:
         if len(data)!=78:raise ValueError('Invalid observation size')

@@ -1,0 +1,8 @@
+{
+  "firmware": "ardupilot",
+  "revision": "92b0cd788ec29406f26c6f9c31d5ceedbd1cc538",
+  "status": "verified",
+  "physical_port": 4
+}
+FC ingress: canonical guard frames, common-dialect deny policy, schema, corruption, resync, flood, budgets and clock-wrap tests passed
+FC adapters: physical-port isolation, report routing only, native signing retained, no local command dispatch, bounded reads passed

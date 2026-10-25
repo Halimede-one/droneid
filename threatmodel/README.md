@@ -2,12 +2,33 @@
 
 **Review: 2026-10-24 · firmware 0.5.0 · XIAO ESP32-C5 · development build**
 
+**Implementation update:** the [independent UART guard](../guard/README.md) is
+now available as separate firmware for a second XIAO. The alternative
+[FC-side ingress filter](../fc_filter/README.md) accepts a single radio XIAO
+directly at UART4 in pinned custom ArduPilot/iNav builds. Choose either option;
+combining them is optional. In both cases,
+installed-FC and power-fault acceptance remain open. The assessment and diagram
+below describe the original direct connection. Use the
+[portrait deployment options](../fc_filter/topology.svg) and
+[guard wiring diagram](../guard/images/wiring.svg) for the updated design.
+
+**P0: partially closed — pending full validation (2026-10-24).** Implementation
+and recorded software/USB checks are closed for this milestone at the user's
+direction. Use guard **0.2.1**, which fixes a startup buffer
+overwrite in 0.2.0 on C5/C6. The [P0 work queue](hardening-plan.md#p0-work-queue-and-exit-criteria)
+and [acceptance record](p0-acceptance.md) identify completed software checks and
+the remaining installed-FC, timing and power evidence. Pick up the
+[P0 verification plan](p0-verification-plan.md) when the FC/harness is ready.
+Full closure requires TM-04 and TM-11 acceptance for the selected installation.
+
 The device is an **untrusted-radio sensor with a connection to a flight controller**.
 Its reports are useful observations, but currently provide no authenticated
 friend-or-foe classification. A radio attacker can mislead or overwhelm the
 receiver without taking over its firmware. If the ESP32 itself is compromised,
 the direct UART transmit connection becomes a potential route into the flight
-controller. There is no independent command filter on that path in this project.
+controller. The original direct wiring has no independent command filter;
+deploy either the separate guard in the signal path, or the custom FC firmware
+with its standalone UART4 filter. The two controls may also be combined.
 
 ## Direct answers
 
@@ -28,6 +49,7 @@ against bad input, but cannot contain firmware takeover.
 
 - [Threat register](threat-register.md): attack conditions, existing controls, impact and gaps.
 - [Hardening plan](hardening-plan.md): priorities and measurable acceptance criteria.
+- [P0 verification plan](p0-verification-plan.md): deferred bench setup, test cases, evidence and full-closure procedure.
 - [Validation and sources](validation.md): reproduction commands, evidence, scope limits and open questions.
 - [Baseline snapshot](evidence/baseline.json): reviewed source/build fingerprints and security configuration.
 - [Offline probe results](evidence/boundary-checks.jsonl): observed properties and weaknesses, not a security certification.

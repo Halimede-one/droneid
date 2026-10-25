@@ -7,3 +7,8 @@ __pycache__/
 .DS_Store
 /logs/
 /.venv/
+/guard/build/
+/guard/sdkconfig
+/guard/sdkconfig.old
+/guard/managed_components/
+/fc_filter/build/

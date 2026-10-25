@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1140" viewBox="0 0 760 1140" role="img" aria-labelledby="title desc">
+  <title id="title">DroneID UART protection: choose either deployment</title>
+  <desc id="desc">Option A: one radio XIAO connects directly to UART4 of a custom FC build containing the security filter. Option B: a radio XIAO connects to a second radio-disabled XIAO guard, then to a stock flight controller. Neither option requires the other. Combining both is optional. ArduPilot supports report routing; iNav still needs a report downlink implementation. Hardware and power acceptance remain open.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9Z" fill="#367556"/></marker>
+    <style>
+      text{font-family:Arial,sans-serif;fill:#203532;font-size:18px}
+      .title{font-size:30px;font-weight:700}.heading{font-size:23px;font-weight:700}
+      .small{font-size:16px;fill:#596d64}.label{font-size:16px;font-weight:700}
+      .line{fill:none;stroke:#367556;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="760" height="1140" rx="18" fill="#f5f6f2"/>
+  <text x="40" y="53" class="title">Two ways to guard the UART</text>
+  <text x="40" y="86" class="small">Choose A or B · combining both is optional</text>
+
+  <rect x="40" y="120" width="680" height="357" rx="14" fill="#eaf1f6" stroke="#7696ad" stroke-width="2"/>
+  <text x="68" y="157" class="heading">A · FC software guard · one XIAO</text>
+  <rect x="68" y="181" width="624" height="64" rx="10" fill="#fff" stroke="#b5c7d3"/>
+  <text x="92" y="219">Radio XIAO · existing DroneID firmware</text>
+  <path d="M380 245V304" class="line"/>
+  <text x="403" y="270" class="small">D6 TX → FC RX4</text>
+  <text x="403" y="295" class="small">FC TX4 → D7 RX</text>
+  <rect x="68" y="308" width="624" height="111" rx="10" fill="#fff" stroke="#7696ad"/>
+  <text x="92" y="341" class="heading">MicoAir FC · custom firmware</text>
+  <text x="92" y="372">UART4 filter → validated reports only</text>
+  <text x="92" y="398" class="small">Direct DRID input · fixed budgets · command handlers excluded</text>
+  <text x="68" y="452" class="label">No second board. The security policy runs inside the FC.</text>
+
+  <rect x="324" y="490" width="112" height="39" rx="19" fill="#203532"/>
+  <text x="380" y="516" text-anchor="middle" style="fill:#fff;font-weight:700">OR</text>
+
+  <rect x="40" y="542" width="680" height="407" rx="14" fill="#edf3e8" stroke="#6f8e69" stroke-width="2"/>
+  <text x="68" y="579" class="heading">B · External UART guard · two XIAOs</text>
+  <rect x="68" y="602" width="624" height="55" rx="10" fill="#fff" stroke="#96ae9c"/>
+  <text x="92" y="636">Radio XIAO · existing DroneID firmware</text>
+  <path d="M380 657V708" class="line"/>
+  <text x="403" y="688" class="small">Sensor UART ↔ guard UART</text>
+  <rect x="68" y="712" width="624" height="82" rx="10" fill="#fff" stroke="#6f8e69"/>
+  <text x="92" y="746" class="heading">Second XIAO · radios disabled</text>
+  <text x="92" y="776" class="small">Validate → limit → regenerate DRG2 reports</text>
+  <path d="M380 794V844" class="line"/>
+  <text x="403" y="823" class="small">Guard D4 TX → FC RX4</text>
+  <rect x="68" y="848" width="624" height="55" rx="10" fill="#fff" stroke="#96ae9c"/>
+  <text x="92" y="882">MicoAir FC · stock firmware + UART configuration</text>
+  <text x="68" y="930" class="label">No FC filter patch required. Policy runs on the second XIAO.</text>
+
+  <text x="40" y="990" font-weight="700">Same reporting limits, different placement of the filter.</text>
+  <text x="40" y="1020" class="small">ArduPilot: report routing. iNav: a report downlink is still needed.</text>
+  <text x="40" y="1048" class="small">IDs, messages and RSSI remain unverified observations.</text>
+  <text x="40" y="1076" class="small">Common GND and verified power design required in either option.</text>
+  <text x="40" y="1104" class="small">Custom builds are unflashed. Hardware timing/power tests remain open.</text>
+</svg>

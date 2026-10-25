@@ -6,21 +6,40 @@ plugged-in devices. **Observed** means a local offline probe reproduced the
 behavior; **code-supported** means a source/configuration fact;
 **conditional** means exploitation requires an additional capability or an
 unproven defect. Impact is qualitative, not a CVSS score or estimated likelihood.
-All mitigation work below is open unless explicitly described as an existing control.
+Mitigation implementation and deployment acceptance are separate states. A
+compiled or simulator-tested control does not close the installed-hardware risk.
+
+**P0 disposition, 2026-10-24: partially closed — pending full validation, at the
+user's direction.** The implementation and recorded software/USB verification
+portion is closed for this milestone. TM-04 retains pending installed-boundary
+acceptance; TM-11 remains open for electrical validation. Severity and priority
+are unchanged. Resume with the [P0 verification plan](p0-verification-plan.md);
+this decision does not claim a flight-qualified installation.
+
+**P0 follow-up:** an [independent guard](../guard/README.md) now implements the
+TM-04 protocol restriction outside the radio sensor. Alternatively, a standalone
+[FC ingress filter](../fc_filter/README.md) provides pinned ArduPilot/iNav
+patches before normal parsing/routing and accepts a single radio XIAO directly.
+Combining both is optional. Build and offline results are recorded
+in [FC evidence](evidence/p0-fc-standalone.json). The latest
+[closure progress](evidence/p0-closure-progress.json) includes a guard startup
+memory fix and rebuilt 0.2.1 images. Installed-FC and electrical acceptance are
+still open; the [closure checklist](p0-acceptance.md) is the release gate.
+The baseline findings below remain applicable to the direct sensor connection.
 
 | ID | Threat | Impact | Evidence / condition | Priority |
 | --- | --- | --- | --- | --- |
 | TM-01 | Forged or replayed aircraft claims | High for operator decisions | Code-supported; no identity authentication | P1 |
 | TM-02 | RF/processing flood and loss of legitimate contacts | High for receiver availability | Contact eviction observed; RF saturation untested | P1 |
 | TM-03 | Radio parser/stack compromise | High; enables TM-04 | Conditional on a reachable vulnerability; none demonstrated | P1 |
-| TM-04 | Compromised ESP32 attacks FC over UART | Potentially critical for flight safety | Direct TX authority is code/wiring-supported; FC effects conditional | P0 |
+| TM-04 | Compromised ESP32 attacks FC over UART | Potentially critical for flight safety | Implementation/recorded checks closed; independent guard OR FC filter available; full FC/harness validation deferred | P0 — partially closed |
 | TM-05 | Spoofed or replayed FC telemetry into ESP32 | Medium now; higher if used for transmission/control later | Unsigned replay observed | P1 |
 | TM-06 | Forged reports or hostile content reach base station | High for evidence integrity | Code-supported; requires report-path access or compromised reporter | P1 |
-| TM-07 | Malformed USB status breaks monitoring | Medium for bench availability | Observed in actual reader with mocked USB | P1 |
+| TM-07 | Malformed USB status breaks monitoring | Medium for bench availability | Numeric overflow fixed and recovery tested; broader schema hardening remains | P1 |
 | TM-08 | Unauthorized USB/debug/configuration access | High; can enable TM-04 | Development interfaces and build settings; physical eFuses unverified | P1 |
 | TM-09 | Local process abuses web-bench authority | High with maintenance privileges | Code-supported local trust assumption; conventional browser attacks guarded | P1 |
 | TM-10 | Modified firmware/dependency supply chain | High; can enable TM-04 | Artifact hashes are not signatures; no secure boot in reviewed build | P1 |
-| TM-11 | Shared power fault affects FC | Potentially critical for flight safety | Hardware-dependent; not measured | P0 integration check |
+| TM-11 | Shared power fault affects FC | Potentially critical for flight safety | No measured power containment; neither software policy addresses it | P0 — open electrical gate |
 
 P0 means resolve the architecture or integration risk before relying on an
 FC-connected installation in adversarial conditions. P1 means harden the next
@@ -124,6 +143,12 @@ TUNNEL frame with the original bytes intact. The worker's rate cap bounds normal
 RF-induced report traffic. This is evidence against a direct hello-to-command
 injection path, not a guarantee against corrupted serial framing or unknown bugs.
 
+The P0 tests additionally demonstrate that a fresh parser starting inside an
+unguarded binary payload can find the embedded frame. The guard's DRG2 encoding
+and regenerated header/CRC remove all interior MAVLink start bytes from its
+FC-bound output. Restart-at-every-byte tests cover this specific framing gap;
+they do not establish immunity to electrical injection or downstream bugs.
+
 **After compromise:** the attacker can replace those behaviors, spoof MAVLink
 IDs, bypass rate limits and transmit other messages. Neither the module's
 component ID nor its intended role limits physical TX authority. Disabling UART
@@ -143,8 +168,40 @@ in the same firmware or adding an ESP-only allowlist cannot contain its takeover
   effect depends on receiver configuration. “Telemetry Output,” lack of TUNNEL
   forwarding, or half-duplex pacing does not establish a read-only connection.
 
-**Action:** enforce a narrow protocol and resource policy outside the ESP32, or
-remove its physical transmit path to the FC. See [P0 architecture](hardening-plan.md#p0--contain-the-flight-controller-boundary).
+**Mitigation status: partially closed — implementation and recorded checks
+complete; full deployment validation deferred.** A separate
+C5/C6/S3 guard or the pinned standalone FC UART4 filter enforces schema,
+command rejection, normalization and byte/work limits outside the Scout's trust
+domain. Host sanitizer and adapter tests pass. This does not qualify UART
+interrupt load, armed/flight behavior, downstream routing or reset behavior on
+the installed controller. Direct Scout wiring to a stock FC remains uncontained.
+
+The [native ArduPilot simulator run](evidence/p0-sitl/result.json) passes on the
+standalone-filter route: reports decode at the operator, mode/armed flag/mission/
+test parameter remain unchanged under the recorded attacks, short floods recover,
+and the simulator exits cleanly. This is partial TM-04 evidence: unsigned,
+disarmed SITL does not establish RC/failsafe authority, signed routing or physical
+FC processing limits. No installed vehicle risk is downgraded from this result.
+
+**Guard defect found during closure review:** guard 0.2.0 called
+`esp_efuse_mac_get_default()` with a six-byte buffer. The reviewed ESP-IDF helper
+writes eight bytes on C5/C6, causing a startup buffer overwrite and incorrect
+identity. A connected C5 reported `3844befeffbe` instead of USB identity
+`3844bebe0c20`; its bench check failed. No attacker-controlled trigger or remote
+exploit was demonstrated. Guard 0.2.1 explicitly requests the six-byte factory
+MAC, and the bench rejects older local builds and preserves guard protection
+when status identity is invalid. All three supported profiles rebuild. The
+designated C5 `38:44:BE:BE:0C:20` has now been flashed to 0.2.1 and passed two
+fresh status checks with matching identity/build hash and startup self-test.
+This closes the startup-fix installation item on that guard, not TM-04's physical
+containment gate. See [installation evidence](evidence/p0-guard-usb-install.json).
+
+**Next action:** prepare the FC/harness, which the user confirmed is not ready;
+execute the physical acceptance gates and record the exact FC build,
+configuration and wiring. The standalone FC-filter route remains an independent
+alternative. Resume cases PV-01–PV-06 and PV-08 in the
+[verification plan](p0-verification-plan.md). See
+[P0 architecture and work queue](hardening-plan.md#p0--contain-the-flight-controller-boundary).
 MAVLink signing can authenticate key possession and provide replay protection;
 it does not itself define a sensor-only permission. Giving the ESP32 a key that
 authorizes general FC commands can preserve the pivot after compromise.
@@ -201,7 +258,7 @@ provenance.
 
 ## TM-07 — Malformed USB record breaks bench monitoring
 
-**Observed defect:** a status JSON value `1e309` becomes Python infinity in
+**Original defect (now fixed):** a status JSON value `1e309` becomes Python infinity in
 [`LineDecoder`](../tools/bench.py). `parse_constant` rejects literal `NaN` and
 `Infinity`, but not this numeric overflow. The decoder accepts the status.
 [`Device.record`](../tools/dashboard.py) stores it in status/log state before
@@ -220,8 +277,14 @@ proof against a malicious endpoint.
 **Action:** reject non-finite numbers and validate field schemas before mutating
 device state; isolate malformed records and reader exceptions; continue healthy
 device monitoring and explicitly show the failure. Add a regression that rejects
-the record and verifies a subsequent valid status still works. The current
-evidence probe asserts the defect and must change when it is fixed.
+the record and verifies a subsequent valid status still works.
+
+**Guard-bench update:** `LineDecoder` now rejects non-finite parsed floats before
+state mutation, including exponent overflow. The offline probe now verifies the
+real reader recovers and produces a serializable snapshot after a subsequent
+valid record. Guard diagnostic fields also receive strict type/range checks.
+Broader radio-status schemas and exception isolation remain P1 work; the original
+[baseline evidence](evidence/boundary-checks.jsonl) is retained as history.
 
 ## TM-08 — USB maintenance, debug and physical access
 
@@ -290,6 +353,12 @@ or a USB serial number as proof of what code is running.
 
 ## TM-11 — Shared power and electrical fault propagation
 
+**Mitigation status: open; hardware evidence required.** No measurements justify
+lowering this risk or closing it with TM-04's protocol implementation.
+It remains a deferred validation item within the partially closed P0 milestone;
+run PV-07 and review its evidence under PV-08 in the
+[verification plan](p0-verification-plan.md).
+
 **Path:** short, wiring error, peripheral current draw or deliberate electrical
 fault → shared supply/ground disturbance → FC reset or degraded operation.
 The example harness shares ground and can power the ESP32 from the FC's 5 V
@@ -300,7 +369,11 @@ separates USB bench power from optional vehicle power and specifies 3.3 V UART
 logic. Actual rail headroom, current limiting, startup/reset behavior and fault
 isolation have not been measured on this board revision.
 
-**Action:** verify peak load and brownout margin with all peripherals attached;
+**Action / closure evidence:** record the installed power design and declare
+permitted FC rail voltage, reset and recovery limits before testing. Verify peak
+load and brownout margin with all peripherals attached;
 choose independent regulation/current limiting where needed and test module
 disconnect/reset/fault behavior on a non-flying bench. Do not infer containment
-from a nominal supply rating or from a UART-only protocol guard.
+from a nominal supply rating or from a UART-only protocol guard. Attach voltage/
+current traces, observed FC reset causes and pass/fail results to the
+[electrical acceptance gate](p0-acceptance.md#evidence-needed-to-close-p0-for-the-first-installation).

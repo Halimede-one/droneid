@@ -1,0 +1,116 @@
+{
+  "recorded_utc": "2026-10-24T23:16:52.631516+00:00",
+  "scope": "Local software implementation/build/testing. No flashing, connected-FC tests or aircraft acceptance.",
+  "architecture": "Radio XIAO -> independent radio-disabled XIAO guard -> separate physical-UART4 policy inside FC firmware.",
+  "project_base_commit": "40bb849b83aec4687dbfadc7ade37b91da280aec",
+  "working_tree": "Uncommitted implementation; hashes below identify reviewed files.",
+  "upstream": {
+    "inav": {
+      "tag": "9.0.0",
+      "commit": "a7932b92eadd92ba7851a009a5c974b9cc24835d"
+    },
+    "ardupilot": {
+      "tag": "Copter-4.6.3",
+      "commit": "92b0cd788ec29406f26c6f9c31d5ceedbd1cc538"
+    }
+  },
+  "policy": {
+    "physical_uart": 4,
+    "ardupilot_serial_index": 4,
+    "baud": 115200,
+    "source": [
+      1,
+      243
+    ],
+    "destination": [
+      255,
+      190
+    ],
+    "allowed_message_ids": [
+      0,
+      385
+    ],
+    "allowed_wire_encoding": "Unsigned MAVLink 2, canonical guard heartbeat or DRG2 Base64 TUNNEL, fixed metadata schema; no interior MAVLink start markers.",
+    "uart_read_bytes_per_call": 128,
+    "input_bytes_per_second": 4096,
+    "input_burst_bytes": 512,
+    "quarantine_bytes": 133,
+    "accepted_bytes_per_second": 800,
+    "accepted_burst_bytes": 160,
+    "interval_ms": {
+      "heartbeat": 1000,
+      "observation": 200,
+      "health": 2000
+    },
+    "partial_gap_ms": 50,
+    "frame_total_ms": 100,
+    "native_signing": "Retained; no unsigned exception added.",
+    "ardupilot_dispatch": "Base packet handler explicitly qualified to bypass vehicle avoidance/follow override; gate first, TUNNEL routing only; heartbeat consumed.",
+    "inav_dispatch": "Count/consume protected input; no ordinary handlers and no report forwarding."
+  },
+  "validation": {
+    "host_suite": "Passed: 5 C/C++ ASan/UBSan executables and 30 Python tests, no skips.",
+    "host_log": "p0-fc-host-tests.txt",
+    "vendor_parser_suite": "Passed against generated ArduCopter 4.6.3 all-dialect headers: policy and actual receive adapters under ASan/UBSan, including signature-required rejection and virtual-handler bypass.",
+    "vendor_log": "p0-fc-vendor-tests.txt",
+    "inav_build": "Passed MICOAIR743V2 and MICOAIR743V2_EXTMAG Release builds, iNav 9.0.0.",
+    "ardupilot_build": "Passed full MicoAir743v2 ArduCopter 4.6.3 build and final GCS_Common.cpp rebuild/link after explicit base-dispatch fix.",
+    "build_log": "p0-fc-builds.txt",
+    "compiler": "Arm GNU Toolchain 13.2.Rel1 (arm-none-eabi-gcc 13.2.1), downloaded by pinned iNav build tooling.",
+    "guard_metadata": "Rechecked: droneid_guard 0.1.0, esp32c5, 211856 bytes, no radio/network components, compiler stack protection all.",
+    "installer": "Both pinned source checkouts verified; tests cover revision/source/board/policy tampering, symlinks, overwrite refusal, read-only checks and idempotent verification.",
+    "svg": "Rendered with librsvg and visually reviewed as a 760x1110 portrait page."
+  },
+  "local_unflashed_artifacts": {
+    "fc_filter/build/arducopter-4.6.3-MicoAir743v2-droneid.bin": {
+      "bytes": 1469228,
+      "sha256": "1b3983e82d02dfeaa0f261b885c01386295f982bea34a1c7c025b5ea4c7e9521"
+    },
+    "fc_filter/build/arducopter-4.6.3-MicoAir743v2-droneid.apj": {
+      "bytes": 1303400,
+      "sha256": "a96ac4847025a150563d9ee19430e43b888ca81dc1decc7a65d948f0da5ed3e0"
+    },
+    "fc_filter/build/inav-9.0.0-MICOAIR743V2_EXTMAG-droneid.hex": {
+      "bytes": 1874361,
+      "sha256": "73b46fae4e8db71ce4c45df2105957a8126f6ebe25825d9737d885ad79c24314"
+    }
+  },
+  "not_performed": [
+    "No sensor, guard or FC was flashed.",
+    "No installed FC configuration exported or changed.",
+    "No hardware UART saturation, native FC state-change injection, reset, latency or fault-current measurements.",
+    "No iNav report downlink implementation.",
+    "No production secure-boot/signing-key provisioning or eFuse changes."
+  ],
+  "remaining_risks": [
+    "Well-formed false/replayed observations remain unverified and can reach the operator within limits.",
+    "Independent guard, FC policy and vendor firmware remain trusted code; sanitizer/build results are not a proof of memory safety.",
+    "Hardware UART/DMA ISR cost and electrical faults are outside byte-parser containment.",
+    "Existing signing-required configurations may reject the unsigned prototype; no authentication downgrade is included.",
+    "Stock FC firmware updates remove this custom FC policy."
+  ],
+  "source_sha256": {
+    "README.md": "5e24ae827154f90a36c7e89c5fa6c878ea64cb61ea3b17ebaff8174d645a54c0",
+    "docs/flight-controller-integration.md": "116a3465224a7fa0fa5971fa8819f07f24e53c1a3f66cc9727f783405efbcb67",
+    "docs/uart-protocol.md": "bb2c72125728156c79eb7b074a7e7e602d6aab3508e15b0f50248286004678d3",
+    "fc_filter/README.md": "66e872e8642943751f96c50f1ea0fe92ba74f075c3f8216e3980dc85b601d26a",
+    "fc_filter/ardupilot_receive.inc": "ed693c46ff9b4bab78639cc17b8df1d7df352e746ac098e65850552b0629c8fb",
+    "fc_filter/droneid_fc_filter.h": "38f342dbef46b448cdb5d8fafccdf2a5626d62dd5a456f71607c390038950cf5",
+    "fc_filter/inav_receive.inc": "028095647b12a0d5fe6471defe379ebca176e3b8899718a92263a1873202febe",
+    "fc_filter/install.py": "198dccb63306389d37fb0a34e1739033cdf0969c19a3b0e350ad8ad8749a08f6",
+    "fc_filter/manifest.json": "39b6ffe02aa61d9296715d407f8d88fe60edac3c40c85467032eb52a85750d08",
+    "fc_filter/patches/ardupilot.patch": "bbef69f1c13498c2f7b0c74e03c1d76dc594fccce6346e33eaf865ef0e89dbe5",
+    "fc_filter/patches/inav.patch": "294221d953670c96a993e5ef961449e635ef81af74038bec3ee90f1de61f733c",
+    "fc_filter/test_ardupilot_headers.sh": "77148a9f043879e7452f98f21e6578245d23eaaac34a944232974c298fe9e7e5",
+    "fc_filter/topology.svg": "e868e95d67cbe4d05388e730a2b257a96b9d023e055bf66ebf7867693a0de4c4",
+    "guard/README.md": "61457aa27abc4092bd6a64c5f1fbc95329125780042c04a055314c419465b9d4",
+    "tests/run_host_tests.sh": "79861d78974bb1ee8733cda871453e355f0a8273d7806f322a2e36ec1f6bd4eb",
+    "tests/test_fc_filter.c": "64f25cfa4c7e380c7a8b41c1964e9a1a5cc6e20b8c0dc88a520cc23be573334d",
+    "tests/test_fc_filter_adapters.cpp": "226dfc083578ecbcee415e0be01eb34907cc37e4db663f2c5c10f1db721d65c4",
+    "tests/test_fc_filter_install.py": "b3d0763869cd9bf08e6eca9b470ac43b653e27a0c2ab0ac87c2ab46a8f3a35d5",
+    "threatmodel/README.md": "2b5cec46a598578d75c8d18f47140a07da068487af12a72d4841f766c516aa64",
+    "threatmodel/hardening-plan.md": "88c1b8add6229c5315ccf4db63b0c1b3c9d238c3b934c49a64858ffff61b9d52",
+    "threatmodel/threat-register.md": "90f42d42d52563a693025ef06bc5895b9cb7be5939b43311524a924ffc462d38",
+    "threatmodel/validation.md": "02b8233c944ca927a39c5088a2015c51dc33d2c60720cf1e40cffbaf25765368"
+  }
+}

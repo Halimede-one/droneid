@@ -11,6 +11,8 @@ from urllib.parse import parse_qs, urlparse
 
 from dashboard import Manager, ROOT
 import bench
+import guard_bench
+import guard_fixture
 
 
 def handler_for(manager):
@@ -53,7 +55,8 @@ def handler_for(manager):
             url = urlparse(self.path)
             try:
                 if url.path == '/api/state':
-                    self.send_json(200, manager.snapshot() | {'token':manager.token, 'firmware':manager.firmware.info()})
+                    self.send_json(200, manager.snapshot() | {'token':manager.token, 'firmware':manager.firmware.info(),
+                        'guards':guard_bench.catalog(), 'guard_fixture':guard_fixture.info()})
                 elif url.path == '/api/events':
                     self.response_headers(200, 'text/event-stream')
                     self.send_header('Connection', 'keep-alive')
@@ -66,6 +69,10 @@ def handler_for(manager):
                         manager.stop.wait(1)
                 elif url.path == '/README.md':
                     data=(ROOT/'README.md').read_bytes()
+                    self.response_headers(200,'text/plain; charset=utf-8',len(data))
+                    self.end_headers(); self.wfile.write(data)
+                elif url.path == '/guard/README.md':
+                    data=(ROOT/'guard/README.md').read_bytes()
                     self.response_headers(200,'text/plain; charset=utf-8',len(data))
                     self.end_headers(); self.wfile.write(data)
                 elif url.path.startswith('/api/devices/'):
@@ -115,6 +122,14 @@ def handler_for(manager):
                     job = device.configure_uart(body)
                 elif parts[3] == 'flash':
                     job = device.flash(manager.firmware, body.get('fingerprint'))
+                elif parts[3] == 'provision':
+                    job = device.provision(manager.firmware, body)
+                elif parts[3] == 'guard-flash':
+                    job = device.flash_guard(body.get('board'), body.get('fingerprint'))
+                elif parts[3] == 'guard-check':
+                    job = device.check_guard(body.get('board'))
+                elif parts[3] == 'guard-uart-test':
+                    job = device.test_guard_uart(body)
                 elif parts[3] == 'identify':
                     status = device.identify()
                     self.send_json(200, {'ok':True, 'status':status}); return

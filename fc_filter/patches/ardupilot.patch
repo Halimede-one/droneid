@@ -1,0 +1,152 @@
+--- a/libraries/GCS_MAVLink/GCS.h
++++ b/libraries/GCS_MAVLink/GCS.h
+@@ -4,6 +4,7 @@
+ #pragma once
+ 
+ #include "GCS_config.h"
++#include <AP_Common/droneid_fc_filter.h>
+ 
+ #if HAL_GCS_ENABLED
+ 
+@@ -811,6 +812,11 @@
+ 
+     /// The stream we are communicating over
+     AP_HAL::UARTDriver *_port;
++    bool droneid_uart() const;
++    void update_droneid_receive();
++    bool route_droneid_packet(const mavlink_message_t &msg);
++    droneid_fc_filter_t droneid_filter{};
++    bool droneid_dispatch = false;
+ 
+     /// Perform queued sending operations
+     ///
+--- a/libraries/GCS_MAVLink/GCS_Common.cpp
++++ b/libraries/GCS_MAVLink/GCS_Common.cpp
+@@ -1790,9 +1790,12 @@
+     pushed_ap_message_ids.set(id);
+ }
+ 
++#include "droneid_receive.inc"
++
+ void GCS_MAVLINK::packetReceived(const mavlink_status_t &status,
+                                  const mavlink_message_t &msg)
+ {
++    if (route_droneid_packet(msg)) return;
+     // we exclude radio packets because we historically used this to
+     // make it possible to use the CLI over the radio
+     if (msg.msgid != MAVLINK_MSG_ID_RADIO && msg.msgid != MAVLINK_MSG_ID_RADIO_STATUS) {
+@@ -1838,6 +1841,11 @@
+ {
+     // do absolutely nothing if we are locked
+     if (locked()) {
++        return;
++    }
++
++    if (droneid_uart()) {
++        update_droneid_receive();
+         return;
+     }
+ 
+--- a/libraries/GCS_MAVLink/GCS_serial_control.cpp
++++ b/libraries/GCS_MAVLink/GCS_serial_control.cpp
+@@ -43,6 +43,7 @@
+         return;
+     }
+ 
++    AP_HAL::UARTDriver *protected_port = AP::serialmanager().get_serial_by_id(DRONEID_FC_SERIAL);
+     bool exclusive = (packet.flags & SERIAL_CONTROL_FLAG_EXCLUSIVE) != 0;
+ 
+     switch (packet.device) {
+@@ -52,6 +53,7 @@
+             break;
+         }
+         stream = port = link->get_uart();
++        if (port != nullptr && port == protected_port) return;
+         link->lock(exclusive);
+         break;
+     }
+@@ -61,22 +63,26 @@
+             break;
+         }
+         stream = port = link->get_uart();
++        if (port != nullptr && port == protected_port) return;
+         link->lock(exclusive);
+         break;
+     }
+ #if AP_GPS_ENABLED
+     case SERIAL_CONTROL_DEV_GPS1:
+         stream = port = hal.serial(3);
++        if (port != nullptr && port == protected_port) return;
+         AP::gps().lock_port(0, exclusive);
+         break;
+     case SERIAL_CONTROL_DEV_GPS2:
+         stream = port = hal.serial(4);
++        if (port != nullptr && port == protected_port) return;
+         AP::gps().lock_port(1, exclusive);
+         break;
+ #endif  // AP_GPS_ENABLED
+     case SERIAL_CONTROL_SERIAL0 ... SERIAL_CONTROL_SERIAL9: {
+         // direct access to a SERIALn port
+         stream = port = AP::serialmanager().get_serial_by_id(packet.device - SERIAL_CONTROL_SERIAL0);
++        if (port != nullptr && port == protected_port) return;
+ 
+         // see if we need to lock mavlink
+         for (uint8_t i=0; i<gcs().num_gcs(); i++) {
+--- a/libraries/AP_SerialManager/AP_SerialManager.cpp
++++ b/libraries/AP_SerialManager/AP_SerialManager.cpp
+@@ -424,6 +424,12 @@
+ // init - // init - initialise serial ports
+ void AP_SerialManager::init()
+ {
++    // Dedicated guard profile: persistent configuration cannot repurpose
++    // physical SERIAL4 as RC/GPS/MSP/another parser at the next boot.
++    static_assert(SERIALMANAGER_NUM_PORTS > DRONEID_FC_SERIAL, "DroneID requires SERIAL4");
++    state[DRONEID_FC_SERIAL].protocol.set(SerialProtocol_MAVLink2);
++    state[DRONEID_FC_SERIAL].baud.set(115);
++    state[DRONEID_FC_SERIAL].options.set(0);
+     // always reset passthru port2 on boot
+     passthru_port2.set_and_save_ifchanged(-1);
+ 
+@@ -601,7 +607,7 @@
+ 
+     // search for matching protocol
+     for(uint8_t i=0; i<SERIALMANAGER_NUM_PORTS; i++) {
+-        if (protocol_match(protocol, (enum SerialProtocol)state[i].protocol.get())) {
++        if (protocol_match(protocol, state[i].get_protocol())) {
+             if (found_instance == instance) {
+                 return &state[i];
+             }
+@@ -795,6 +801,7 @@
+ bool AP_SerialManager::get_passthru(AP_HAL::UARTDriver *&port1, AP_HAL::UARTDriver *&port2, uint8_t &timeout_s,
+                                     uint32_t &baud1, uint32_t &baud2)
+ {
++    if (passthru_port1 == DRONEID_FC_SERIAL || passthru_port2 == DRONEID_FC_SERIAL) return false;
+     if (passthru_port2 < 0 ||
+         passthru_port1 < 0) {
+         return false;
+@@ -824,6 +831,7 @@
+ // accessor for AP_Periph to set baudrate and type
+ void AP_SerialManager::set_protocol_and_baud(uint8_t sernum, enum SerialProtocol protocol, uint32_t baudrate)
+ {
++    if (sernum == DRONEID_FC_SERIAL) return;
+     if (sernum < SERIALMANAGER_NUM_PORTS) {
+         state[sernum].protocol.set(protocol);
+         state[sernum].baud.set(baudrate);
+--- a/libraries/AP_SerialManager/AP_SerialManager.h
++++ b/libraries/AP_SerialManager/AP_SerialManager.h
+@@ -20,6 +20,7 @@
+   find which serial port they should use
+  */
+ #pragma once
++#include <AP_Common/droneid_fc_filter.h>
+ 
+ #include "AP_SerialManager_config.h"
+ 
+@@ -147,6 +148,7 @@
+             return AP_SerialManager::map_baudrate(baud);
+         }
+         AP_SerialManager::SerialProtocol get_protocol() const {
++            if (idx == DRONEID_FC_SERIAL) return SerialProtocol_MAVLink2;
+             return AP_SerialManager::SerialProtocol(protocol.get());
+         }
+         AP_Int32 baud;

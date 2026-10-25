@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="980" viewBox="0 0 760 980" role="img" aria-labelledby="title desc">
+  <title id="title">Independent DroneID UART guard wiring</title>
+  <desc id="desc">Two XIAO ESP32-C5 boards. Radio sensor D6 TX connects to guard D9 RX; guard D8 TX connects to sensor D7 RX. Guard D4 TX connects to MicoAir RX4; MicoAir TX4 connects to guard D5 RX. Guard D6 and D7 are unused ROM UART pins. All grounds connect. No direct radio-to-FC signal wires. Use independent USB power for the bench and leave VBUS and 3V3 pads unconnected.</desc>
+  <defs>
+    <marker id="down" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#367556"/></marker>
+    <marker id="up" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1L9 5L1 9Z" fill="#34698b"/></marker>
+    <style>
+      text {font-family:Arial,sans-serif;fill:#203532;font-size:18px}
+      .heading {font-size:25px;font-weight:700}
+      .title {font-size:32px;font-weight:700}
+      .small {font-size:16px;fill:#596d64}
+      .green {fill:#367556}.blue {fill:#34698b}
+      .wire {fill:none;stroke-width:3}
+    </style>
+  </defs>
+  <rect width="760" height="980" rx="18" fill="#f5f6f2"/>
+  <text x="40" y="55" class="title">P0 · independent UART guard</text>
+  <text x="40" y="86" class="small">Signal routing · 115200 baud · 3.3 V UART logic · hardware test pending</text>
+  <rect x="40" y="120" width="680" height="132" rx="14" fill="#fff" stroke="#96ae9c" stroke-width="1.5"/>
+  <text x="72" y="158" class="heading">Radio sensor · first XIAO</text>
+  <text x="72" y="190">Normal DroneID firmware · BLE / Wi-Fi enabled</text>
+  <text x="72" y="222" class="small">D6 / GPIO11 TX · D7 / GPIO12 RX</text>
+  <path d="M90 252V360" class="wire" stroke="#367556" marker-end="url(#down)"/>
+  <path d="M670 360V252" class="wire" stroke="#34698b" marker-end="url(#up)"/>
+  <text x="126" y="291" class="green">↓ Sensor D6 TX → guard D9 / GPIO9 RX</text>
+  <text x="126" y="324" class="blue">↑ Sensor D7 RX ← guard D8 / GPIO8 TX</text>
+  <rect x="40" y="360" width="680" height="226" rx="14" fill="#edf3e8" stroke="#6f8e69" stroke-width="2"/>
+  <text x="72" y="400" class="heading">Independent guard · second XIAO</text>
+  <text x="72" y="434">droneid_guard firmware · radios absent from build</text>
+  <rect x="72" y="454" width="616" height="98" rx="8" fill="#fff" stroke="#d8e2d9"/>
+  <text x="94" y="485">Sensor side: UART0 · D9 RX / D8 TX</text>
+  <text x="94" y="521">FC side: UART1 · D4 TX / D5 RX</text>
+  <text x="72" y="573" class="small">Guard D6 / D7 stay unconnected: keep ROM UART off the harness.</text>
+  <path d="M90 586V704" class="wire" stroke="#367556" marker-end="url(#down)"/>
+  <path d="M670 704V586" class="wire" stroke="#34698b" marker-end="url(#up)"/>
+  <text x="126" y="625" class="green">↓ Guard D4 / GPIO23 TX → FC RX4</text>
+  <text x="126" y="659" class="blue">↑ Guard D5 / GPIO24 RX ← FC TX4</text>
+  <rect x="40" y="704" width="680" height="104" rx="14" fill="#fff" stroke="#7c9993" stroke-width="1.5"/>
+  <text x="72" y="743" class="heading">MicoAir H743 V2 AIO · UART4</text>
+  <text x="72" y="776">Only the guard connects to FC RX4 / TX4.</text>
+  <rect x="40" y="834" width="680" height="110" rx="12" fill="#fff7e9" stroke="#d6b77f"/>
+  <text x="62" y="864" font-weight="700">Ground + bench power</text>
+  <text x="62" y="892" class="small">Connect all GNDs. Power both XIAOs separately over USB.</text>
+  <text x="62" y="918" class="small">Leave VBUS/5V and 3V3 pads unconnected. Remove direct sensor–FC wires.</text>
+</svg>

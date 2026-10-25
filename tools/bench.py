@@ -5,6 +5,7 @@ import argparse
 from contextlib import nullcontext
 from datetime import datetime, timezone
 import json
+import math
 import re
 from pathlib import Path
 import sys
@@ -14,6 +15,13 @@ import uuid
 
 def reject_constant(value):
     raise ValueError(f"Non-JSON numeric constant: {value}")
+
+
+def finite_float(value):
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError('Non-finite JSON number')
+    return result
 
 
 class LineDecoder:
@@ -31,7 +39,7 @@ class LineDecoder:
             if byte == 10:
                 if not self.discarding and self.buffer:
                     try:
-                        record = json.loads(self.buffer, parse_constant=reject_constant)
+                        record = json.loads(self.buffer, parse_constant=reject_constant, parse_float=finite_float)
                         if (not isinstance(record, dict) or
                                 type(record.get("schema")) is not int or record['schema'] != 1):
                             raise ValueError("Unsupported record schema")

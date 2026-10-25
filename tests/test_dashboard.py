@@ -249,6 +249,10 @@ class HTTPTests(unittest.TestCase):
         identify_status={'identifying':True,'session':'boot'}
         device=SimpleNamespace(configure=lambda body: called.append(body) or 'job1',
             configure_uart=lambda body: called.append(body) or 'uart1',
+            flash_guard=lambda board,fingerprint:called.append(('guard-flash',board,fingerprint)) or 'guard1',
+            check_guard=lambda board:called.append(('guard-check',board)) or 'guard2',
+            test_guard_uart=lambda body:called.append(('guard-uart-test',body)) or 'guard3',
+            provision=lambda firmware,body:called.append(('provision',body)) or 'role1',
             identify=lambda:called.append('identify') or identify_status)
         manager=SimpleNamespace(token='test-token',snapshot=lambda:{'devices':[]},
             firmware=SimpleNamespace(info=lambda:{'available':False}),device=lambda key:device)
@@ -287,6 +291,15 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(code,200)
         self.assertEqual(json.loads(body),{'ok':True,'status':identify_status})
         self.assertEqual(called[-1],'identify')
+        self.assertEqual(request('GET','/guard/README.md')[0],200)
+        for action in ('guard-flash','guard-check','guard-uart-test','provision'):
+            payload={'board':'xiao_esp32c6','fingerprint':'reviewed-build','fixture_confirmed':True}
+            before=len(called)
+            self.assertEqual(request('POST','/api/devices/abc/'+action,payload)[0],403)
+            self.assertEqual(len(called),before)
+            self.assertEqual(request('POST','/api/devices/abc/'+action,payload,
+                {'X-DroneID-Token':'test-token','Origin':'http://127.0.0.1:8766'})[0],202)
+            self.assertEqual(called[-1][0],action)
 
 
 if __name__=='__main__':unittest.main()
