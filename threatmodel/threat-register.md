@@ -35,7 +35,7 @@ The baseline findings below remain applicable to the direct sensor connection.
 | TM-04 | Compromised ESP32 attacks FC over UART | Potentially critical for flight safety | Implementation/recorded checks closed; independent guard OR FC filter available; full FC/harness validation deferred | P0 — partially closed |
 | TM-05 | Spoofed or replayed FC telemetry into ESP32 | Medium now; higher if used for transmission/control later | Unsigned replay observed | P1 |
 | TM-06 | Forged reports or hostile content reach base station | High for evidence integrity | Code-supported; requires report-path access or compromised reporter | P1 |
-| TM-07 | Malformed USB status breaks monitoring | Medium for bench availability | Numeric overflow fixed and recovery tested; broader schema hardening remains | P1 |
+| TM-07 | Malformed USB status breaks monitoring | Medium for bench availability | USB schemas, pre-commit validation and per-device reader recovery implemented and verified | P1 — closed for reviewed input path |
 | TM-08 | Unauthorized USB/debug/configuration access | High; can enable TM-04 | Development interfaces and build settings; physical eFuses unverified | P1 |
 | TM-09 | Local process abuses web-bench authority | High with maintenance privileges | Code-supported local trust assumption; conventional browser attacks guarded | P1 |
 | TM-10 | Modified firmware/dependency supply chain | High; can enable TM-04 | Artifact hashes are not signatures; no secure boot in reviewed build | P1 |
@@ -258,6 +258,12 @@ provenance.
 
 ## TM-07 — Malformed USB record breaks bench monitoring
 
+**Status: closed for the reviewed malformed-USB input path, 2026-10-24.**
+The [P1 verification record](evidence/p1-usb-validation.json) covers strict schemas,
+state isolation, recovery and multi-device HTTP availability. Sustained resource
+floods and broader HTTP limits remain separate open P1 items; this closure does
+not establish authenticity of device claims.
+
 **Original defect (now fixed):** a status JSON value `1e309` becomes Python infinity in
 [`LineDecoder`](../tools/bench.py). `parse_constant` rejects literal `NaN` and
 `Infinity`, but not this numeric overflow. The decoder accepts the status.
@@ -274,17 +280,23 @@ current firmware emit this malformed status. The USB serial identity comparison
 is useful against accidentally selecting another device, not a cryptographic
 proof against a malicious endpoint.
 
-**Action:** reject non-finite numbers and validate field schemas before mutating
-device state; isolate malformed records and reader exceptions; continue healthy
-device monitoring and explicitly show the failure. Add a regression that rejects
-the record and verifies a subsequent valid status still works.
+**Implemented control:** [`usb_records.py`](../tools/usb_records.py) validates
+Scout/guard status, replies, observation metadata/decoded fields and nested UART/
+GPS/counters. It enforces field types/ranges, required and allowed keys, finite
+numbers and bounded structure. `LineDecoder` rejects duplicate keys, invalid
+UTF-8 and over-limit/deep input and resynchronizes at a newline. `Device.record`
+revalidates/copies and prepares JSON serialization before mutating device state.
+Reader exceptions produce bounded per-device diagnostics and release/retry that
+port. Rejection/retry counters remain visible after a fresh status recovers.
 
 **Guard-bench update:** `LineDecoder` now rejects non-finite parsed floats before
 state mutation, including exponent overflow. The offline probe now verifies the
 real reader recovers and produces a serializable snapshot after a subsequent
 valid record. Guard diagnostic fields also receive strict type/range checks.
-Broader radio-status schemas and exception isolation remain P1 work; the original
-[baseline evidence](evidence/boundary-checks.jsonl) is retained as history.
+The subsequent P1 regression covers malformed nested/type/range cases, invalid
+new-session records leaving status/contacts/logs unchanged, healthy-device
+continuity and actual `/api/state` handler responses while the bad reader recovers.
+The [baseline evidence](evidence/boundary-checks.jsonl) is retained as history.
 
 ## TM-08 — USB maintenance, debug and physical access
 

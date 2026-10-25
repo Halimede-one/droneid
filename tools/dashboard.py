@@ -19,6 +19,7 @@ import time
 import bench
 import guard_bench
 import guard_fixture
+import usb_records
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_LOGS = 500
@@ -175,6 +176,7 @@ class Device:
         self.error = None
         self.status = None
         self.status_at = None
+        self.usb_input = {'rejected_lines':0, 'reader_failures':0, 'last_error':None, 'last_error_utc':None}
         self.guard_seen = False
         self.identify_request = None
         self.identify_hold_until = 0
@@ -199,7 +201,10 @@ class Device:
 
     def record(self, record):
         timestamp = time.time()
-        record = dict(record, host_received_utc=now_utc())
+        # Revalidate at the state boundary too (tests/internal callers need not
+        # arrive through LineDecoder). Copy so caller mutation cannot poison it.
+        record = dict(usb_records.snapshot(record), host_received_utc=now_utc())
+        encoded = json.dumps(record, allow_nan=False)
         if record.get('kind') == 'status' and re.fullmatch('[0-9a-f]{12}', self.info['id']):
             if record.get('receiver_id') != self.info['id']:
                 # A broken/older guard identity must not make an ordinary
@@ -241,10 +246,18 @@ class Device:
             self.log_cursor += 1
             self.logs.append({'cursor': self.log_cursor, 'record': record})
         try:
-            self.log_handler.emit(logging.LogRecord('usb', logging.INFO, '', 0, json.dumps(record, allow_nan=False), (), None))
+            self.log_handler.emit(logging.LogRecord('usb', logging.INFO, '', 0, encoded, (), None))
         except OSError as exc:
             with self.lock:
                 self.error = f'Log file could not be written: {exc}'
+
+    def input_failure(self, message, count=1, reader=False):
+        with self.lock:
+            key = 'reader_failures' if reader else 'rejected_lines'
+            self.usb_input[key] = min(2**32-1, self.usb_input[key]+count)
+            self.usb_input['last_error'] = message
+            self.usb_input['last_error_utc'] = now_utc()
+            self.error = message
 
     def finish_identify(self, result=None, error=None):
         with self.lock:
@@ -292,12 +305,21 @@ class Device:
                     stream.write(b'\nstatus\n')
                     while not self.stop.is_set() and not self.pause.is_set() and self.wants_usb() and self.present:
                         self.send_identify(stream)
-                        for record in decoder.feed(stream.read(2048)):
+                        invalid_before = decoder.invalid_lines
+                        records = decoder.feed(stream.read(2048))
+                        if decoder.invalid_lines > invalid_before:
+                            self.input_failure(decoder.last_error, decoder.invalid_lines-invalid_before)
+                        for record in records:
                             self.record(record)
             except (serial.SerialException, OSError) as exc:
+                self.input_failure(str(exc)[:240], reader=True)
                 with self.lock:
                     self.connection = 'waiting'
-                    self.error = str(exc)
+            except Exception as exc:
+                # A processing bug or unexpected driver failure must not kill
+                # this reader forever or escape into another board's state.
+                # Do not echo arbitrary device values from exception messages.
+                self.input_failure('USB reader failed ('+type(exc).__name__+'); retrying this device.', reader=True)
             finally:
                 self.finish_identify(error='USB monitoring stopped before Identify could be confirmed.')
                 self.closed.set()
@@ -313,6 +335,7 @@ class Device:
             return dict(self.info, present=self.present, monitoring=self.monitoring,
                         device_type='uart_guard' if self.guard_seen else 'radio',
                         connection=self.connection, error=self.error, status=self.status,
+                        usb_input=dict(self.usb_input),
                         status_age_s=None if self.status_at is None else now-self.status_at,
                         contacts=self.contacts.snapshot(now), log_cursor=self.log_cursor,
                         job=None if self.job is None else dict(self.job, lines=list(self.job['lines'])))

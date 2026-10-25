@@ -6,6 +6,7 @@ import struct
 import sys
 import tempfile
 import unittest
+from usb_fixtures import guard
 from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).parents[1] / 'tools'))
@@ -38,8 +39,7 @@ class GuardTests(unittest.TestCase):
             info = {'id': '102030405060', 'serial': '10:20:30:40:50:60', 'port': '/offline', 'tty': '/offline'}
             device = dashboard.Device(info, log_dir=directory, start=False)
             try:
-                device.record({'schema':1, 'kind':'status', 'receiver_id': info['id'],
-                               'session':'guard', 'device_type':'uart_guard'})
+                device.record(guard(receiver_id=info['id'],session='guard'))
                 bundle = Mock()
                 with self.assertRaisesRegex(ValueError, 'UART guard'):
                     device.flash(bundle, 'irrelevant')

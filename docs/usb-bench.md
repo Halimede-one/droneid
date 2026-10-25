@@ -137,6 +137,35 @@ the board. Keep `monitor` running for a continuous capture; opening another
 command can begin a new boot session. Saved roles persist, and `session` lets
 the base station distinguish restarted uptime and sequence numbers.
 
+## Host validation
+
+The CLI and web bench validate device records with
+[`tools/usb_records.py`](../tools/usb_records.py) before using them. Accepted wire
+input is UTF-8 schema-1 JSONL, at most 4,096 bytes per line. The host rejects
+duplicate keys, unsupported kinds/fields, excessive nesting (maximum depth 6),
+oversized structures (256 visited values/keys), non-finite numbers, out-of-range
+integers and wrong field types, including booleans in numeric fields. Oversized
+or malformed lines are discarded through their newline; the next valid record
+can be accepted on the same stream.
+
+Schemas cover Scout status, guard status, replies, observation metadata and all
+currently decoded RID data objects, including nested UART/position/GPS and guard
+counters. Identity/session and kind-specific core fields are required. Optional
+telemetry/identify fields permit older known schema-1 records; whenever present,
+they are validated too. Unknown fields fail closed, so a firmware extension must
+update the host schema. Firmware predating the configured-ID status fields needs
+an update before using this host. Valid observations remain unauthenticated claims.
+
+The dashboard revalidates and copies input, and prepares serialization before
+changing status, sessions, contacts or logs. Invalid input cannot clear contacts
+by supplying a new session. Unexpected reader/driver exceptions are isolated to
+that device and retried after a delay. The selected-device view and `/api/state`
+expose `usb_input.rejected_lines`, `reader_failures`, `last_error` and its UTC time;
+counts persist for that device's lifetime in the server. Rejected lines can
+include boot text or partial reconnect data. A recovered status clears the active
+error, while counters retain the history. These checks do not establish device
+authenticity or a global throughput/flood budget.
+
 ## Observation contract
 
 Each `kind: "observation"` line describes one received message, not an aggregated

@@ -48,8 +48,7 @@ class GuardBuildTests(unittest.TestCase):
             d=dashboard.Device(info,log_dir=tmp,start=False)
             try:
                 with self.assertRaisesRegex(OSError,'identity'):
-                    d.record({'kind':'status','receiver_id':'3844befeffbe',
-                              'device_type':'uart_guard','firmware':'0.2.0','ready':True})
+                    d.record(status(build(Path(tmp)).bundle())|{'receiver_id':'3844befeffbe','firmware':'0.2.0'})
                 self.assertEqual(d.snapshot()['device_type'],'uart_guard')
                 self.assertIsNone(d.status)
                 with self.assertRaises(ValueError):d.flash(None,None)
@@ -121,11 +120,12 @@ class GuardBuildTests(unittest.TestCase):
             info={'id':'102030405060','serial':'102030405060','port':'/fake','tty':'/fake'}
             d=dashboard.Device(info,log_dir=tmp,start=False)
             try:
+                good = status(build(Path(tmp)).bundle())
                 def work():return lambda s:s['policy_selftest'] is True
                 d.begin('guard-check',work,guard=True)
                 deadline=time.monotonic()+2
                 while d.operation_lock.locked() and time.monotonic()<deadline:
-                    d.record({'schema':1,'kind':'status','receiver_id':info['id'],'device_type':'uart_guard','ready':True,'policy_selftest':True})
+                    d.record(good)
                     time.sleep(.02)
                 self.assertEqual(d.job['state'],'complete')
             finally:d.stop.set();d.log_handler.close()

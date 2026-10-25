@@ -1,0 +1,2 @@
+{"check": "rotating_sources_evict_contact", "result": "observed", "bounded_contacts": 128, "original_source_evicted": true}
+{"check": "nonfinite_usb_status", "result": "observed", "decoder_accepted": false, "reader_recovered": true, "snapshot_not_json_serializable": false}

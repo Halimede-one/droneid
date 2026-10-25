@@ -1,10 +1,14 @@
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
+from usb_fixtures import scout, reply
+
+sys.path.insert(0, str(Path(__file__).parents[1] / 'tools'))
 
 spec = importlib.util.spec_from_file_location('bench', Path(__file__).parents[1] / 'tools/bench.py')
 bench = importlib.util.module_from_spec(spec)
@@ -33,8 +37,7 @@ class StreamTests(unittest.TestCase):
                 if self.fail:
                     raise Disconnected('USB re-enumerating')
                 token = self.command.decode().split()[-1]
-                return (json.dumps({'schema':1, 'kind':'reply', 'request_id':token,
-                                    'ok':self.ok, 'message':'rejected'}) + '\n').encode()
+                return (json.dumps(reply(request_id=token,ok=self.ok,message='rejected')) + '\n').encode()
 
         first, second = Device(fail=True), Device()
         with patch.object(bench, 'serial_modules', return_value=(SimpleNamespace(SerialException=Disconnected), None)), \
@@ -52,22 +55,22 @@ class StreamTests(unittest.TestCase):
 
     def test_fragmented_and_multiple_records(self):
         decoder = bench.LineDecoder()
-        encoded = b'{"schema":1,"kind":"status"}\n'
+        encoded = (json.dumps(scout())+'\n').encode()
         self.assertEqual(decoder.feed(encoded[:10]), [])
         self.assertEqual(len(decoder.feed(encoded[10:] + encoded)), 2)
 
     def test_boot_noise_and_partial_reconnect(self):
         decoder = bench.LineDecoder()
-        records = decoder.feed(b'ESP-ROM boot\npartial}\n{"schema":1,"kind":"reply","ok":true}\n')
+        records = decoder.feed(b'ESP-ROM boot\npartial}\n'+(json.dumps(reply())+'\n').encode())
         self.assertEqual(len(records), 1)
         self.assertEqual(decoder.invalid_lines, 2)
 
     def test_oversized_line_cannot_be_resumed_as_a_record(self):
-        decoder = bench.LineDecoder(limit=40)
-        encoded = b'{"schema":1,"kind":"status"}\n'
-        self.assertEqual(decoder.feed(b'x' * 41 + encoded), [])
+        decoder = bench.LineDecoder(limit=500)
+        encoded = (json.dumps(scout())+'\n').encode()
+        self.assertEqual(decoder.feed(b'x' * 501 + encoded), [])
         self.assertEqual(len(decoder.feed(encoded)), 1)
-        self.assertLessEqual(len(decoder.buffer), 40)
+        self.assertLessEqual(len(decoder.buffer), 500)
 
     def test_invalid_schema_json_and_rssi(self):
         decoder = bench.LineDecoder()

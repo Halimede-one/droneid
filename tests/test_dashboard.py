@@ -14,15 +14,7 @@ sys.path.insert(0, str(Path(__file__).parents[1] / 'tools'))
 import bench
 import dashboard
 import server
-
-
-def observation(kind='basic_id', **changes):
-    value = {'schema':1,'kind':'observation','session':'boot1','source_address':'10:20:30:40:50:60',
-             'source_address_type':0,'transport':'wifi_beacon','channel':6,'rssi_dbm':-55,
-             'message_type':kind,'decode_status':'ok','rx_us':100,'reported_us':100,
-             'data':{'id_type':4,'uas_id_hex':(b'\xffSCOUT-01'+b'\0'*11).hex()}}
-    value.update(changes)
-    return value
+from usb_fixtures import scout, reply, observation
 
 
 class AggregationTests(unittest.TestCase):
@@ -136,7 +128,8 @@ class DeviceTests(unittest.TestCase):
                     def __enter__(self):opened.append(self);return self
                     def __exit__(self,*args):self.closed=True;self.active=False
                     def emit(self,kind,token='',**extra):
-                        self.pending.append(dict(schema=1,kind=kind,receiver_id=self.port.split('/')[-1],
+                        factory = reply if kind=='reply' else scout
+                        self.pending.append(factory(receiver_id=self.port.split('/')[-1],
                             session='boot'+str(len(opened)),request_id=token,**extra))
                     def write(self,value):
                         for line in value.decode().splitlines():
@@ -192,13 +185,13 @@ class DeviceTests(unittest.TestCase):
             try:
                 d.record(observation())
                 self.assertEqual(len(d.contacts.items),1)
-                d.record({'schema':1,'kind':'status','session':'boot2','receiver_id':d.info['id']})
+                d.record(scout(session='boot2',receiver_id=d.info['id']))
                 self.assertEqual(len(d.contacts.items),0)
                 for i in range(dashboard.MAX_LOGS+10):
-                    d.record({'schema':1,'kind':'reply','session':'boot2','ok':True})
+                    d.record(reply(session='boot2'))
                 self.assertEqual(len(d.logs),dashboard.MAX_LOGS)
                 with self.assertRaises(OSError):
-                    d.record({'schema':1,'kind':'status','receiver_id':'ffffffffffff'})
+                    d.record(scout(receiver_id='ffffffffffff'))
             finally:d.log_handler.close()
 
     def test_operation_releases_only_its_port_and_never_overlaps_reader(self):
@@ -216,7 +209,7 @@ class DeviceTests(unittest.TestCase):
             def write(self,value):pass
             def read(self,size):
                 time.sleep(.01)
-                return (json.dumps({'schema':1,'kind':'status','session':'boot','receiver_id':self.port.split('/')[-1],'radio_ready':True})+'\n').encode()
+                return (json.dumps(scout(session='boot',receiver_id=self.port.split('/')[-1]))+'\n').encode()
         with tempfile.TemporaryDirectory() as tmp, \
              patch.object(bench,'serial_modules',return_value=(SimpleNamespace(SerialException=OSError),None)), \
              patch.object(bench,'connect',side_effect=Stream):

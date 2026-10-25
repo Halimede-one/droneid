@@ -94,6 +94,9 @@ function render() {
   if (!d) return;
   $('selected-name').textContent=nameOf(d);
   $('selected-meta').textContent=`${d.tty}  /  ${d.serial}`;
+  const input=d.usb_input;
+  $('usb-input-health').hidden=!(input?.rejected_lines || input?.reader_failures);
+  $('usb-input-health').textContent=input ? `USB input: ${input.rejected_lines} rejected lines · ${input.reader_failures} reader retries. Last issue: ${input.last_error || 'none'}` : '';
   const live=d.present && d.monitoring && d.connection==='monitoring' && !busy(d);
   $('device-state').textContent=!d.present ? 'Disconnected' : busy(d) ? 'Working…' : live ? (d.status?'Monitoring':'USB open · awaiting firmware') : 'Monitor paused';
   $('device-state').classList.toggle('offline',!live);

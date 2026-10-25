@@ -91,7 +91,7 @@ Temporary host logs are removed. Output is JSONL; the review output is saved in
 | Complete benign MAVLink heartbeat inside the 25 raw observation bytes | Exactly one outer TUNNEL frame, configured envelope IDs, raw bytes unchanged | Supports the normal serializer's data/command separation. Does not prove behavior after ESP32 compromise, serial corruption or arbitrary parser defects. |
 | Same unsigned FC heartbeat replayed after expiry | Accepted without a key; replay refreshes heartbeat age | Confirms no authentication/replay gate for that telemetry path. No real controller involved. |
 | One original contact followed by 128 distinct source MACs | Store remains at 128; original contact is evicted | Confirms bounded memory but vulnerable contact retention. The records are constructed offline; RF loss rates are not measured. |
-| USB status containing numeric overflow `1e309` | Originally accepted and broke the reader; guard-bench update rejects it, then accepts a subsequent valid status with a serializable snapshot | Regression uses the real reader with mocked serial. Broader schema hardening remains open; historical baseline evidence is preserved. |
+| USB status containing numeric overflow `1e309` | Originally accepted and broke the reader; now rejected, then a valid status is accepted with serializable state | Real-reader regression with mocked serial. P1 adds full current-record schemas and multi-device isolation; historical baseline evidence is preserved. |
 
 **These are baseline evidence probes, not security acceptance tests.** Several
 assert a known weakness. Exit code zero means the documented observations were
@@ -108,13 +108,16 @@ dated results as historical evidence.
 | Fixed TUNNEL envelope / unsigned FC telemetry | [fc_link](../components/fc_link/fc_link.c) |
 | Queue limits, expiry, rate cap and independent worker | [fc_uart](../main/fc_uart.c) |
 | USB commands, persistence, status | [application](../main/app_main.c) |
-| USB JSON bounds and numeric-overflow acceptance | [LineDecoder](../tools/bench.py) |
+| USB JSON bounds, duplicate-key rejection, numeric/field schemas | [LineDecoder](../tools/bench.py), [USB schemas](../tools/usb_records.py) |
 | Reader failure, contact eviction, firmware bundle checks | [dashboard](../tools/dashboard.py) |
 | Loopback/Host/Origin/token/CSP and resource assumptions | [server](../tools/server.py) |
 | Browser rendering of untrusted text | [web app](../web/app.js) |
 | Downlink report decoding and absent source/replay authentication | [base-station helper](../tools/mavlink_receiver.py) |
 
 ## Remaining validation
+
+The first P1 USB-input item is complete: see
+[P1 USB validation and reader isolation](#p1-usb-validation-and-reader-isolation).
 
 The deployment-specific [P0 closure checklist](p0-acceptance.md) is the current
 acceptance record. P0 is **partially closed, pending full validation**, at the
@@ -130,7 +133,7 @@ forwarding is also an unimplemented functional path.
 | FC isolation | Matching firmware in simulation, then isolated bench; test chosen independent guard or one-way wiring | Exact versions/configuration; rejected message classes; no unauthorized state changes; bounded processing and control-link latency |
 | Real downlink trust | Map every participant/bridge and inspect signing/encryption/source policies | Injection/replay rejection, route behavior, session/reboot handling, reporter attribution |
 | Build and physical access controls | Spare-board provisioning/recovery exercises and read-only eFuse inventory | Signed boot enforcement, debug/download state, approved recovery, unique key inventory |
-| Host availability fix | Schema/error recovery regression with multiple mocked devices | Bad device cannot break shared state or healthy readers |
+| Host resource budgets | Sustained valid-input floods and HTTP concurrency/resource tests | Declared CPU/memory/latency limits and fairness; schema rejection/recovery is already verified separately |
 | UI content handling | Browser tests using hostile strings and malformed device data | Text-only display, bounded rendering, no script execution or unsafe export interpretation |
 | Electrical containment | Non-flying bench with actual board revision and peripheral load | Supply margin; behavior under module reset, disconnect, short/current limiting and startup UART output |
 | Dependency exposure | Pin SDK commit and radio-library versions; review relevant upstream advisories | Per-advisory applicability and remediation decision, not a generic ESP32 vulnerability list |
@@ -229,3 +232,40 @@ startup/shutdown failures. The runner now specifies only paths 0–8 and require
 a clean exit; the recorded passing run exited with code 0. It also waits for
 `ArduPilot Ready` before mission setup. Earlier setup failures are not acceptance
 passes and did not involve physical hardware or changes to the FC policy.
+
+## P1 USB validation and reader isolation
+
+**Completed 2026-10-24 for the reviewed schema-1 USB input path.**
+[`usb_records.py`](../tools/usb_records.py) validates field shapes/ranges and
+bounded structure for Scout/guard status, replies and observations. Both the
+stream decoder and state boundary enforce it. The latter copies accepted input
+and prepares serialization before changing session/status/contact/log state.
+Unknown fields, invalid UTF-8, duplicate keys, non-finite numbers and excessive
+size/depth are rejected. See the [host contract](../docs/usb-bench.md#host-validation).
+
+The [P1 evidence record](evidence/p1-usb-validation.json) contains source hashes,
+48 passing Python tests, six passing C/C++ sanitizer executables, browser checks,
+read-only compatibility validation of 1,503 existing records, and fresh normal
+status after the host-service reload on two Scouts (0.5.2) and the guard (0.2.1).
+The tests use malformed input followed by valid records, check that rejected
+new-session input cannot mutate stored state, and exercise two actual reader
+threads plus the real `/api/state` handler with mocked serial. An injected
+processor exception proves the port is released, the reader recovers, and the
+failure is reported. Browser tests verify diagnostic text remains text, including HTML
+markup supplied in the mocked error field.
+
+Reproduce the host checks from the repository root:
+
+```sh
+PATH="$PWD/.venv/bin:$PATH" bash tests/run_host_tests.sh
+.venv/bin/python threatmodel/checks/host_inputs.py
+```
+
+[Host output](evidence/p1-usb-host-tests.txt) and
+[boundary probe output](evidence/p1-host-input-probes.jsonl) preserve the results.
+The rotating-source/contact-eviction probe still demonstrates an open RF/report
+availability issue; it is not silently relabeled as passing containment.
+Malformed-input testing used simulated USB streams; physical boards only supplied
+normal records. No firmware change or hardware attack injection was needed.
+Per-record bounds and reader recovery do not qualify sustained ingress/HTTP
+resource limits, source authentication or the deferred P0 hardware gates.

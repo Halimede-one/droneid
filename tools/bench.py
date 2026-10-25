@@ -12,6 +12,8 @@ import sys
 import time
 import uuid
 
+import usb_records
+
 
 def reject_constant(value):
     raise ValueError(f"Non-JSON numeric constant: {value}")
@@ -24,14 +26,46 @@ def finite_float(value):
     return result
 
 
+def bounded_int(value):
+    if len(value.lstrip('-')) > 20:
+        raise ValueError('USB integer too long')
+    return int(value)
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate USB object key')
+        result[key] = value
+    return result
+
+
+def check_json_depth(raw):
+    depth = 0
+    quoted = escaped = False
+    for byte in raw:
+        if quoted:
+            if escaped: escaped = False
+            elif byte == 92: escaped = True
+            elif byte == 34: quoted = False
+        elif byte == 34: quoted = True
+        elif byte in (91,123):
+            depth += 1
+            if depth > usb_records.MAX_DEPTH:
+                raise ValueError('USB JSON nesting too deep')
+        elif byte in (93,125): depth -= 1
+
+
 class LineDecoder:
     """Bound memory and recover at a newline after noise or a partial record."""
 
-    def __init__(self, limit=4096):
-        self.limit = limit
+    def __init__(self, limit=usb_records.MAX_LINE):
+        self.limit = min(limit, usb_records.MAX_LINE)
         self.buffer = bytearray()
         self.discarding = False
         self.invalid_lines = 0
+        self.last_error = None
 
     def feed(self, chunk):
         records = []
@@ -39,19 +73,14 @@ class LineDecoder:
             if byte == 10:
                 if not self.discarding and self.buffer:
                     try:
-                        record = json.loads(self.buffer, parse_constant=reject_constant, parse_float=finite_float)
-                        if (not isinstance(record, dict) or
-                                type(record.get("schema")) is not int or record['schema'] != 1):
-                            raise ValueError("Unsupported record schema")
-                        if record.get("kind") not in ("observation", "status", "reply"):
-                            raise ValueError("Unknown record kind")
-                        if record["kind"] == "observation":
-                            rssi = record.get("rssi_dbm")
-                            if rssi is not None and (type(rssi) is not int or not -127 <= rssi <= 126):
-                                raise ValueError("Invalid RSSI")
+                        check_json_depth(self.buffer)
+                        record = json.loads(self.buffer.decode('utf-8'), parse_constant=reject_constant, parse_float=finite_float,
+                                            parse_int=bounded_int, object_pairs_hook=unique_object)
+                        usb_records.validate(record)
                         records.append(record)
                     except (ValueError, UnicodeError, RecursionError):
                         self.invalid_lines += 1
+                        self.last_error = 'Invalid USB JSON or unsupported record fields'
                 self.buffer.clear()
                 self.discarding = False
             elif not self.discarding:
@@ -59,6 +88,7 @@ class LineDecoder:
                     self.buffer.clear()
                     self.discarding = True
                     self.invalid_lines += 1
+                    self.last_error = 'USB line exceeds size limit'
                 else:
                     self.buffer.append(byte)
         return records

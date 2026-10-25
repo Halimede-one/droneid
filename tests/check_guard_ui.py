@@ -21,6 +21,7 @@ guard_c5=dict(guard,id='102030405062',serial='10:20:30:40:50:62',tty='/dev/ttyAC
 guard_c5['status']['receiver_id']=guard_c5['id']
 data={'devices':[radio,guard,guard_c5],'guards':catalog,'guard_fixture':{'available':True,'adapters':[{'id':'a','label':'Sensor adapter · A'},{'id':'b','label':'FC adapter · B'}]},'token':'mock-token','firmware':{'available':True,'version':'0.5.2','size':1100000,'fingerprint':'scout-build'},'server_time':0}
 calls=[];errors=[]
+radio['usb_input']={'rejected_lines':7,'reader_failures':1,'last_error':'<img src=x onerror="window.badUSB=true">'}
 def route(req):
     path=req.request.url.split('8766',1)[1]
     if path=='/api/state':req.fulfill(json=data)
@@ -37,6 +38,9 @@ with sync_playwright() as play:
     page.add_init_script('window.EventSource=class {addEventListener(){}}')
     page.route('**/*',route);page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto('http://127.0.0.1:8766/')
+    assert '7 rejected lines' in page.locator('#usb-input-health').inner_text()
+    assert page.locator('#usb-input-health img').count()==0
+    assert page.evaluate('window.badUSB === undefined')
     assert page.locator('[role="tab"]').count()==3
     assert page.locator('#tab-guards').count()==0
     page.locator('#tab-settings').click()

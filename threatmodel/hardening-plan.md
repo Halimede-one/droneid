@@ -139,14 +139,19 @@ At the same integration gate, measure shared-rail current and fault behavior
 
 ## P1 — Fix host input handling and expose uncertainty
 
-| Change | Acceptance criterion | Threats |
-| --- | --- | --- |
-| Validate USB record schemas and all numeric values before committing state | Overflowing numbers, invalid types, oversized/nested data and malformed records are rejected; a valid following record works; other boards remain usable. Convert the TM-07 probe into a rejection/recovery regression. | TM-07 |
-| Isolate reader failures and invalid state | Every reader failure produces an explicit per-device error; `/api/state` and other devices remain serializable and responsive. | TM-07, TM-09 |
-| Label aircraft claims and receiver health | Identity/hello views visibly say unverified; fresh receipt does not imply fresh/authentic aircraft data; stale/overloaded/disconnected receivers are distinct from “no contacts.” | TM-01, TM-02 |
-| Add global ingress budgets plus bounded fairness | Sustained valid floods cannot cause unbounded callback work, heap growth or an indefinite failure to resume. MAC rotation is included in tests. Record CPU/heap/drop/latency thresholds before testing. | TM-02, TM-03 |
-| Preserve evidence semantics | Raw messages, receiver/session/sequence, local receive/report times, losses and claimed source remain available; reporter authentication and aircraft authentication are separate fields. | TM-01, TM-06 |
-| Bound HTTP resources | Connection/read timeouts, concurrent requests and streaming clients have explicit limits; existing Host/Origin/token/CSP checks keep passing. | TM-09 |
+**First P1 item completed, 2026-10-24:** USB schema validation and the associated
+reader-isolation work now pass the [host-input verification](evidence/p1-usb-validation.json).
+The original numeric-overflow probe remains a rejection/recovery regression.
+P0 stays partially closed pending its separate hardware verification plan.
+
+| Change | Status | Acceptance criterion / evidence | Threats |
+| --- | --- | --- | --- |
+| Validate USB record schemas and all numeric values before committing state | Complete for current USB schema-1 records | Wrong types/ranges, overflow, duplicate keys, oversized/deep input and malformed nested fields rejected before state changes; later valid records accepted; copied state cannot be changed through caller aliases | TM-07 |
+| Isolate reader failures and invalid state | Complete for per-device readers | Bad-device and injected processor-failure tests preserve healthy monitoring and HTTP state serialization; reader retries recover; rejection/retry history visible per device | TM-07, TM-09 |
+| Label aircraft claims and receiver health | Open | Identity/hello views visibly say unverified; fresh receipt does not imply fresh/authentic aircraft data; stale/overloaded/disconnected receivers are distinct from “no contacts.” | TM-01, TM-02 |
+| Add global ingress budgets plus bounded fairness | Open | Sustained valid floods cannot cause unbounded callback work, heap growth or an indefinite failure to resume. MAC rotation is included in tests. Record CPU/heap/drop/latency thresholds before testing. | TM-02, TM-03 |
+| Preserve evidence semantics | Open | Raw messages, receiver/session/sequence, local receive/report times, losses and claimed source remain available; reporter authentication and aircraft authentication are separate fields. | TM-01, TM-06 |
+| Bound HTTP resources | Open | Connection/read timeouts, concurrent requests and streaming clients have explicit limits; existing Host/Origin/token/CSP checks keep passing. | TM-09 |
 
 Do not turn a replay cache or a MAC allowlist into a “friendly” decision. Those
 can suppress duplicate work, but an untrusted sender can change counters and

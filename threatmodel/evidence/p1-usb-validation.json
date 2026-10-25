@@ -1,0 +1,207 @@
+{
+  "review_date": "2026-10-24",
+  "status": "passed",
+  "scope": "First P1: schema validation before USB-derived state mutation and per-device reader failure isolation",
+  "threat": "TM-07",
+  "limits": {
+    "wire_bytes_per_line": 4096,
+    "max_depth": 6,
+    "max_visited_nodes": 256,
+    "unknown_fields": "rejected",
+    "duplicate_keys": "rejected"
+  },
+  "host_tests": {
+    "python_tests": 48,
+    "sanitizer_executables": 6,
+    "result": "passed",
+    "log": "p1-usb-host-tests.txt"
+  },
+  "regressions": [
+    "non-finite/overflowing numbers and wrong numeric types/ranges",
+    "malformed nested Scout/guard/UART/GPS/observation fields",
+    "missing/unknown fields, duplicate keys and invalid UTF-8",
+    "deep/oversized input and newline recovery",
+    "invalid new-session input cannot mutate status/contacts/logs",
+    "accepted records are copied to prevent caller alias mutation",
+    "bad USB device leaves healthy reader and actual HTTP state handler usable",
+    "unexpected processor exception releases/retries selected port and recovers"
+  ],
+  "browser": {
+    "browser_errors": [],
+    "routes_verified": [
+      [
+        "/api/devices/102030405060/provision",
+        {
+          "board": "xiao_esp32c5",
+          "fingerprint": "81c1b30044fdf18f3f6dc35a3d575825a811076a02a97512014f1334c38cc7c2",
+          "role": "guard"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-check",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "79a3ff591abe1d44699625b805aa94a54fc01bab67d09bec1f22a0ccac29c57e"
+        }
+      ],
+      [
+        "/api/devices/102030405061/guard-uart-test",
+        {
+          "board": "xiao_esp32c6",
+          "fingerprint": "79a3ff591abe1d44699625b805aa94a54fc01bab67d09bec1f22a0ccac29c57e",
+          "sensor_adapter": "a",
+          "fc_adapter": "b",
+          "fixture_confirmed": true
+        }
+      ],
+      [
+        "/api/devices/102030405062/provision",
+        {
+          "role": "scout",
+          "board": "xiao_esp32c5",
+          "fingerprint": "scout-build"
+        }
+      ]
+    ],
+    "responsive_width": 390,
+    "usb_rejection_retry_counters_visible": true,
+    "diagnostic_text_not_interpreted_as_html": true
+  },
+  "cached_record_compatibility": {
+    "scope": "Read-only validation of existing USB records through the new schema; no device commands",
+    "accepted": {
+      "observation": 871,
+      "status": 632
+    },
+    "failures": [],
+    "devices": [
+      {
+        "id": "10bda3ca3860",
+        "firmware": "0.5.2",
+        "job_state": null
+      },
+      {
+        "id": "3844be1f4850",
+        "firmware": "0.5.2",
+        "job_state": null
+      },
+      {
+        "id": "3844bebe0c20",
+        "firmware": "0.2.1",
+        "job_state": "complete"
+      }
+    ]
+  },
+  "live_after_reload": {
+    "result": "passed",
+    "checked_utc": "2026-10-25T03:28:09.063783+00:00",
+    "scope": "Host service reload and fresh normal USB records on three connected boards; no malformed input injected into hardware",
+    "samples": [
+      [
+        {
+          "id": "10bda3ca3860",
+          "device_type": "radio",
+          "firmware": "0.5.2",
+          "session": "bd6ff936321632c2",
+          "uptime": 56922419,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426480+00:00"
+          },
+          "status_age_s": 1.5607264041900635
+        },
+        {
+          "id": "3844be1f4850",
+          "device_type": "radio",
+          "firmware": "0.5.2",
+          "session": "131927a1d8e3137c",
+          "uptime": 56862437,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426685+00:00"
+          },
+          "status_age_s": 1.568523645401001
+        },
+        {
+          "id": "3844bebe0c20",
+          "device_type": "uart_guard",
+          "firmware": "0.2.1",
+          "session": "fe5be9fb4b45d25e",
+          "uptime": 58011,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426156+00:00"
+          },
+          "status_age_s": 0.5324482917785645
+        }
+      ],
+      [
+        {
+          "id": "10bda3ca3860",
+          "device_type": "radio",
+          "firmware": "0.5.2",
+          "session": "bd6ff936321632c2",
+          "uptime": 60962636,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426480+00:00"
+          },
+          "status_age_s": 0.45639848709106445
+        },
+        {
+          "id": "3844be1f4850",
+          "device_type": "radio",
+          "firmware": "0.5.2",
+          "session": "131927a1d8e3137c",
+          "uptime": 60883197,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426685+00:00"
+          },
+          "status_age_s": 0.5159616470336914
+        },
+        {
+          "id": "3844bebe0c20",
+          "device_type": "uart_guard",
+          "firmware": "0.2.1",
+          "session": "fe5be9fb4b45d25e",
+          "uptime": 60011,
+          "input": {
+            "rejected_lines": 5,
+            "reader_failures": 0,
+            "last_error": "Invalid USB JSON or unsupported record fields",
+            "last_error_utc": "2026-10-25T03:27:07.426156+00:00"
+          },
+          "status_age_s": 1.5424506664276123
+        }
+      ]
+    ]
+  },
+  "source_sha256": {
+    "tools/usb_records.py": "9689ffc518f899c6b8029aaab61d15110ed17e10adb7603102a084a87e22daa3",
+    "tools/bench.py": "197af545bc1577b17e71378f954fc7e12abb0b4f92c921a9fc6ada37ae0e7129",
+    "tools/dashboard.py": "6efd096ee4a9dc9cb60a0f1dba3eb747c7bfb7a51288403d6a357922109eb1bc",
+    "web/app.js": "c155d7a7220f4c5d577993b02a7c4031a3ad13c000b0065b7670fd1ad6b3fcf7",
+    "web/index.html": "593ed286fdb3cc1a20fe76c6fd45007642d12f90536d42b819ff3405f6b49d73",
+    "tests/test_usb_records.py": "42937c4ac57501202ec3c261975b1ea99f05f3aac197c9c75669a8dc99ba3b73",
+    "tests/usb_fixtures.py": "b1e33b5803ee231fda5e085a0d7c92b043f0675afcf66042c82dc11c782f14b6",
+    "tests/check_guard_ui.py": "8a172eefcfe6a1e5a4c4873c503f6b7e43336a68262318a864dd0652f2e0e1bf"
+  },
+  "limitations": [
+    "No malformed data was injected into physical hardware; hostile-input tests use simulated USB streams",
+    "No firmware or eFuses changed",
+    "Per-record structure bounds do not establish global ingress/flood/HTTP resource limits",
+    "Device and aircraft identities remain unverified",
+    "P0 remains partially closed pending full validation"
+  ]
+}

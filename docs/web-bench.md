@@ -79,6 +79,12 @@ The USB protocol is schema-1 JSONL, serving as the bench substitute for the
 planned UART/MAVLink integration.
 
 Each connected board has its own reader, log, contacts, and operation status.
+USB records are validated before changing those views. The selected-device view
+shows rejected-line and reader-retry counts when nonzero; the last issue remains
+visible after recovery. Malformed lines are discarded, and unexpected reader
+failures retry that device without stopping the others. Counts also include
+incomplete lines or boot text and reset when the server recreates the device.
+See the [USB validation contract](usb-bench.md#host-validation).
 **Pause monitor** releases only that board's serial port for another tool;
 it does not disable the board's radio. **Start monitor** resumes collection.
 Flashing/configuring a selected board pauses and restores its reader, while

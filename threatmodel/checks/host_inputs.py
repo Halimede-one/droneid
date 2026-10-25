@@ -42,8 +42,9 @@ def malformed_usb_status():
            b'"session":"test","free_heap_bytes":1e309}\n')
     decoder = bench.LineDecoder()
     assert decoder.feed(raw) == [] and decoder.invalid_lines == 1
-    good = (b'{"schema":1,"kind":"status","receiver_id":"102030405060",'
-            b'"session":"recovered","radio_ready":true}\n')
+    good = (json.dumps(dict(schema=1,kind='status',receiver_id='102030405060',session='recovered',request_id='',
+        role='rx',firmware='0.5.2',configuration_version=1,broadcast_id='SCOUT-01',hello_hex='',
+        tx_transport='wifi_beacon',radio_ready=True,uptime_us=100))+'\n').encode()
 
     class FakeStream:
         reads = 0
